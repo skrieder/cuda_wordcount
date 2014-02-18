@@ -135,53 +135,62 @@ void verify_table( const Table &dev_table ) {
 
 
 int main( void ) {
-    unsigned int *buffer =
-                     (unsigned int*)big_random_block( SIZE );
+    
+  // generates a large array of integers for the input data
+  unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
+  unsigned int *dev_keys;
+  void         **dev_values;
 
-    unsigned int *dev_keys;
-    void         **dev_values;
-    HANDLE_ERROR( cudaMalloc( (void**)&dev_keys, SIZE ) );
-    HANDLE_ERROR( cudaMalloc( (void**)&dev_values, SIZE ) );
-    HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE,
-                              cudaMemcpyHostToDevice ) );
-    // copy the values to dev_values here
-    // filled in by user of this code example
+  // allocate memory on the device
+  HANDLE_ERROR( cudaMalloc( (void**)&dev_keys, SIZE ) );
+  HANDLE_ERROR( cudaMalloc( (void**)&dev_values, SIZE ) );
 
-    Table table;
-    initialize_table( table, HASH_ENTRIES, ELEMENTS );
+  // move the input data to the device
+  HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
 
-    Lock    lock[HASH_ENTRIES];
-    Lock    *dev_lock;
-    HANDLE_ERROR( cudaMalloc( (void**)&dev_lock,
-                              HASH_ENTRIES * sizeof( Lock ) ) );
-    HANDLE_ERROR( cudaMemcpy( dev_lock, lock,
-                              HASH_ENTRIES * sizeof( Lock ),
-                              cudaMemcpyHostToDevice ) );
+  // copy the values to dev_values here
+  // filled in by user of this code example
+  Table table;
+  initialize_table( table, HASH_ENTRIES, ELEMENTS );
 
-    cudaEvent_t     start, stop;
-    HANDLE_ERROR( cudaEventCreate( &start ) );
-    HANDLE_ERROR( cudaEventCreate( &stop ) );
-    HANDLE_ERROR( cudaEventRecord( start, 0 ) );
+  // create a lock array for each entry
+  Lock    lock[HASH_ENTRIES];
+  // create a device pointer for locks
+  Lock    *dev_lock;
 
-    add_to_table<<<60,256>>>( dev_keys, dev_values,
-                              table, dev_lock );
+  // allocate the device lock array
+  HANDLE_ERROR( cudaMalloc( (void**)&dev_lock, HASH_ENTRIES * sizeof( Lock ) ) );
+  // move the lock array to the GPU
+  HANDLE_ERROR( cudaMemcpy( dev_lock, lock, HASH_ENTRIES * sizeof( Lock ), cudaMemcpyHostToDevice ) );
 
-    HANDLE_ERROR( cudaEventRecord( stop, 0 ) );
-    HANDLE_ERROR( cudaEventSynchronize( stop ) );
-    float   elapsedTime;
-    HANDLE_ERROR( cudaEventElapsedTime( &elapsedTime,
-                                        start, stop ) );
-    printf( "Time to hash:  %3.1f ms\n", elapsedTime );
+  cudaEvent_t     start, stop;
+  HANDLE_ERROR( cudaEventCreate( &start ) );
+  HANDLE_ERROR( cudaEventCreate( &stop ) );
+  HANDLE_ERROR( cudaEventRecord( start, 0 ) );
 
-    verify_table( table );
+  // call device function to parallel add to table
+  // this launches 60 blocks with 256 threads each, each block is scheduled on a SM.
+  add_to_table<<<60,256>>>( dev_keys, dev_values,table, dev_lock );
 
-    HANDLE_ERROR( cudaEventDestroy( start ) );
-    HANDLE_ERROR( cudaEventDestroy( stop ) );
-    free_table( table );
-    HANDLE_ERROR( cudaFree( dev_lock ) );
-    HANDLE_ERROR( cudaFree( dev_keys ) );
-    HANDLE_ERROR( cudaFree( dev_values ) );
-    free( buffer );
-    return 0;
+  HANDLE_ERROR( cudaEventRecord( stop, 0 ) );
+  HANDLE_ERROR( cudaEventSynchronize( stop ) );
+  
+  float   elapsedTime;
+  HANDLE_ERROR( cudaEventElapsedTime( &elapsedTime, start, stop ) );
+    
+  printf( "Time to hash:  %3.1f ms\n", elapsedTime );
+
+  verify_table( table );
+
+  // destroy CUDA event
+  HANDLE_ERROR( cudaEventDestroy( start ) );
+  HANDLE_ERROR( cudaEventDestroy( stop ) );
+  
+  free_table( table );
+  HANDLE_ERROR( cudaFree( dev_lock ) );
+  HANDLE_ERROR( cudaFree( dev_keys ) );
+  HANDLE_ERROR( cudaFree( dev_values ) );
+  free( buffer );
+  return 0;
 }
 
