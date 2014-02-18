@@ -84,27 +84,37 @@ void free_table( Table &table ) {
     HANDLE_ERROR( cudaFree( table.entries ) );
 }
 
-__global__ void add_to_table( unsigned int *keys, void **values, 
-                              Table table, Lock *lock ) {
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    int stride = blockDim.x * gridDim.x;
+/* global add_to_table 
+This function runs on the CUDA device. It takes a list of keys and void ** values along with a table and an array of locks. All of the threads in the current execution will stride across the array and insert relevant items into the table.*/
 
-    while (tid < ELEMENTS) {
-        unsigned int key = keys[tid];
-        size_t hashValue = hash( key, table.count );
-        for (int i=0; i<32; i++) {
-            if ((tid % 32) == i) {
-                Entry *location = &(table.pool[tid]);
-                location->key = key;
-                location->value = values[tid];
-                lock[hashValue].lock();
-                location->next = table.entries[hashValue];
-                table.entries[hashValue] = location;
-                lock[hashValue].unlock();
-            }
-        }
-        tid += stride;
+__global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
+
+  // get the thread id for the current cuda thread context
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  // set a stride based on cuda thread info
+  int stride = blockDim.x * gridDim.x;
+
+  // walk the data and hash and insert
+  while (tid < ELEMENTS) {
+    unsigned int key = keys[tid];
+    size_t hashValue = hash( key, table.count );
+    for (int i=0; i<32; i++) {
+      if ((tid % 32) == i) {
+	Entry *location = &(table.pool[tid]);
+	location->key = key;
+        
+	// TODO - Rather than setting this to the value of a TID you would need to 
+	// get the current value and add 1 for each occurrence of the hash
+	location->value = values[tid];
+	lock[hashValue].lock();
+	location->next = table.entries[hashValue];
+	table.entries[hashValue] = location;
+	lock[hashValue].unlock();
+      }
     }
+    // thread id is increased by the size of the stride to get the next new chunk of data and avoid overwriting anything that is complete
+    tid += stride;
+  }
 }
 
 // copy table back to host, verify elements are there
@@ -140,6 +150,8 @@ void verify_table( const Table &dev_table ) {
 int main( void ) {
     
   // generates a large array of integers for the input data
+  /* TODO - rather than generate a large block of int's you want to read from a text file and build an array of (char *)'s */
+
   unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
   unsigned int *dev_keys;
   void         **dev_values;
@@ -173,7 +185,7 @@ int main( void ) {
   HANDLE_ERROR( cudaEventRecord( start, 0 ) );
 
   // call device function to parallel add to table
-  // this launches 60 blocks with 256 threads each, each block is scheduled on a SM.
+  // this launches 60 blocks with 256 threads each, each block is scheduled on a SM without any order guarantees
   add_to_table<<<60,256>>>( dev_keys, dev_values,table, dev_lock );
 
   // trigger event
@@ -200,4 +212,3 @@ int main( void ) {
   free( buffer );
   return 0;
 }
-
