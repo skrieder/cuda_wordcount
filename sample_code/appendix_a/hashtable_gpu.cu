@@ -107,8 +107,11 @@ __global__ void add_to_table( unsigned int *keys, void **values,
     }
 }
 
+// copy table back to host, verify elements are there
 void verify_table( const Table &dev_table ) {
     Table   table;
+    
+    // move table to host
     copy_table_to_host( dev_table, table );
 
     int count = 0;
@@ -163,6 +166,7 @@ int main( void ) {
   // move the lock array to the GPU
   HANDLE_ERROR( cudaMemcpy( dev_lock, lock, HASH_ENTRIES * sizeof( Lock ), cudaMemcpyHostToDevice ) );
 
+  // start a cuda event
   cudaEvent_t     start, stop;
   HANDLE_ERROR( cudaEventCreate( &start ) );
   HANDLE_ERROR( cudaEventCreate( &stop ) );
@@ -172,20 +176,23 @@ int main( void ) {
   // this launches 60 blocks with 256 threads each, each block is scheduled on a SM.
   add_to_table<<<60,256>>>( dev_keys, dev_values,table, dev_lock );
 
+  // trigger event
   HANDLE_ERROR( cudaEventRecord( stop, 0 ) );
   HANDLE_ERROR( cudaEventSynchronize( stop ) );
   
+  // print the timer
   float   elapsedTime;
   HANDLE_ERROR( cudaEventElapsedTime( &elapsedTime, start, stop ) );
-    
   printf( "Time to hash:  %3.1f ms\n", elapsedTime );
 
+  // move table back and verify
   verify_table( table );
 
   // destroy CUDA event
   HANDLE_ERROR( cudaEventDestroy( start ) );
   HANDLE_ERROR( cudaEventDestroy( stop ) );
   
+  // free memory
   free_table( table );
   HANDLE_ERROR( cudaFree( dev_lock ) );
   HANDLE_ERROR( cudaFree( dev_keys ) );
