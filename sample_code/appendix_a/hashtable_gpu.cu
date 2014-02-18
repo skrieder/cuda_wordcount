@@ -34,7 +34,7 @@ struct Table {
     Entry   *pool;
 };
 
-
+// TODO - This function needs to be modified to generate a hash based on a strong input
 __device__ __host__ size_t hash( unsigned int key,
                                  size_t count ) {
     return key % count;
