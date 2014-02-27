@@ -1,3 +1,5 @@
 #! /bin/bash
-
-nvcc -arch=sm_11 appendix_a/hashtable_gpu.cu -o hashtable_gpu
+src=$1
+fileName=`echo $src| awk -F "." ' {print $1}'`
+rm $fileName
+nvcc -arch=sm_20 -g $src -o $fileName

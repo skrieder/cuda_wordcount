@@ -12,6 +12,14 @@
 #define HASH_ENTRIES     1024
 
 unsigned long TABLE_SIZE = 0;
+struct Bucket{
+        char key[10];
+        unsigned long count;
+	Lock lock;
+};
+
+
+/*
 
 struct Entry {
 	unsigned int key;
@@ -61,22 +69,36 @@ void free_table(Table &table) {
 	HANDLE_ERROR(cudaFree(table.pool));
 	HANDLE_ERROR(cudaFree(table.entries));
 }
+*/
 
-__device__ void put(char* key, Table table){
+__device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mod){
+        unsigned long hash = 0; int c=0;
+        while (c = *str++)
+            hash = c + (hash << 6) + (hash << 16) - hash;
+        //printf("hash value before mod: %lu, and ", hash );
+        //printf("mod: %lu\n", mod );
+        return hash % mod;
+}
+
+
+
+
+__device__ void put(unsigned char* key, Bucket* table){
+	unsigned long index = hash_sdbm(key, TABLE_SIZE);
 	
+	table[index].lock.lock();
+	
+	//table[index]->key = key;
+	memcpy(table[index]->key, key, sizeof(*key));
+	table[index].count ++;
+	
+	table[index].lock.unlock();
 	
 	//printf()
 
 }
 
 /*
-__device__ unsigned long dev_hash_sdbm(unsigned char *str, unsigned long mod){
-        unsigned long hash = 0; int c=0;
-        while (c = *str++)
-            hash = c + (hash << 6) + (hash << 16) - hash;
-        return hash % mod; 
-}*/
-
 __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mod){
         unsigned long hash = 0; int c=0;
         while (c = *str++)
@@ -85,7 +107,7 @@ __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mo
 	//printf("mod: %lu\n", mod );
 	return hash % mod;
 }
-
+*/
 __device__ void tokenize (const char* string, char* nextToken){
 	//nextToken = strtok (string, ", .");
 }
