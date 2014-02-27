@@ -11,7 +11,7 @@
 #define ELEMENTS    (SIZE / sizeof(unsigned int))
 #define HASH_ENTRIES     1024
 
-unsigned long TABLE_SIZE = 0
+unsigned long TABLE_SIZE = 0;
 
 struct Entry {
 	unsigned int key;
