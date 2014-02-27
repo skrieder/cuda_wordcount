@@ -23,6 +23,7 @@
 struct Entry {
 	unsigned int key;
 	void *value;
+	unsigned long count;
 	Entry *next;
 };
 
