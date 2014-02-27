@@ -175,7 +175,7 @@ int main(void) {
 
 	// call device function to parallel add to table
 	// this launches 60 blocks with 256 threads each, each block is scheduled on a SM without any order guarantees
-add_to_table<<<60,256>>>( dev_keys, dev_values,table, dev_lock );
+	add_to_table<<<60,256>>>( dev_keys, dev_values,table, dev_lock );
 
   // trigger event
   	HANDLE_ERROR(cudaEventRecord(stop, 0));
