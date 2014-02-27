@@ -107,6 +107,8 @@ __global__ void add_to_table(unsigned int *keys, void **values, Table table,
 	}
 }
 
+
+
 // copy table back to host, verify elements are there
 void verify_table(const Table &dev_table) {
 	Table table;

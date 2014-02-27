@@ -11,6 +11,8 @@
 #define ELEMENTS    (SIZE / sizeof(unsigned int))
 #define HASH_ENTRIES     1024
 
+unsigned long TABLE_SIZE = 0
+
 struct Entry {
 	unsigned int key;
 	void *value;
@@ -60,7 +62,12 @@ void free_table(Table &table) {
 	HANDLE_ERROR(cudaFree(table.entries));
 }
 
+__device__ void put(char* key, Table table){
+	
+	
+	printf()
 
+}
 
 /*
 __device__ unsigned long dev_hash_sdbm(unsigned char *str, unsigned long mod){
@@ -98,7 +105,7 @@ int main ()
 	unsigned long hashValue =0;
   	unsigned char str[] ="This, a sample string.";
 	unsigned long mod =1000000;
-	
+	TABLE_SIZE = mod;
 	unsigned char* dev_str;
 	unsigned long* dev_hashValue;
 	//unsigned long* dev_mod;
@@ -107,11 +114,11 @@ int main ()
 	//HANDLE_ERROR( cudaMalloc( (void**)&dev_mod, sizeof(unsigned long)));	
 	HANDLE_ERROR( cudaMemcpy( dev_str, &str, sizeof(str), cudaMemcpyHostToDevice));
 	//HANDLE_ERROR( cudaMemcpy( dev_mod, &mod, sizeof(unsigned long), cudaMemcpyHostToDevice));
-	hashTest<<<1,1>>>(dev_str, mod, dev_hashValue);	
+	hashTest<<<1,1>>>(dev_str, TABLE_SIZE, dev_hashValue);	
 
 	HANDLE_ERROR( cudaMemcpy( &hashValue, dev_hashValue, sizeof(unsigned long), cudaMemcpyDeviceToHost ));	
 
-	printf("The string is \"%s\", the CPU computed hash value is %lu, and the GPU computed hash value is %lu\n", str, hash_sdbm(str, mod), hashValue);  	
+	printf("The string is \"%s\", the CPU computed hash value is %lu, and the GPU computed hash value is %lu\n", str, hash_sdbm(str, TABLE_SIZE), hashValue);  	
 	//kernel<<<1,1>>>();
 
   /*
