@@ -65,7 +65,7 @@ void free_table(Table &table) {
 __device__ void put(char* key, Table table){
 	
 	
-	printf()
+	//printf()
 
 }
 
