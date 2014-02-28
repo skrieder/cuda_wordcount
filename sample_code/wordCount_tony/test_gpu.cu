@@ -18,58 +18,11 @@ struct Bucket{
 	Lock lock;
 };
 
-
-/*
-
-struct Entry {
-	unsigned int key;
-	void *value;
+struct Hashtable{
 	unsigned long count;
-	Entry *next;
+	Bucket* table; // table has to be of length count
+	//Lock lock[count];
 };
-
-struct Table {
-	size_t count;
-	Entry **entries;
-	Entry *pool;
-};
-
-__device__ __host__ size_t hash(unsigned int key, size_t count) {
-	return key % count;
-}
-
-void initialize_table(Table &table, int entries, int elements) {
-	table.count = entries;
-	HANDLE_ERROR(cudaMalloc((void** )&table.entries, entries * sizeof(Entry*)));
-	HANDLE_ERROR(cudaMemset(table.entries, 0, entries * sizeof(Entry*)));
-	HANDLE_ERROR(cudaMalloc((void** )&table.pool, elements * sizeof(Entry)));
-}
-
-
-void copy_table_to_host(const Table &table, Table &hostTable) {
-	hostTable.count = table.count;
-	hostTable.entries = (Entry**) calloc(table.count, sizeof(Entry*));
-	hostTable.pool = (Entry*) malloc( ELEMENTS * sizeof(Entry));
-
-	HANDLE_ERROR(cudaMemcpy(hostTable.entries, table.entries, table.count * sizeof(Entry*), cudaMemcpyDeviceToHost));
-	HANDLE_ERROR(cudaMemcpy( hostTable.pool, table.pool, ELEMENTS * sizeof( Entry ), cudaMemcpyDeviceToHost));
-
-	for (int i = 0; i < table.count; i++) {
-		if (hostTable.entries[i] != NULL)
-			hostTable.entries[i] = (Entry*) ((size_t) hostTable.entries[i] - (size_t) table.pool + (size_t) hostTable.pool);
-	}
-
-	for (int i = 0; i < ELEMENTS; i++) {
-		if (hostTable.pool[i].next != NULL)
-			hostTable.pool[i].next = (Entry*) ((size_t) hostTable.pool[i].next - (size_t) table.pool + (size_t) hostTable.pool);
-	}
-}
-
-void free_table(Table &table) {
-	HANDLE_ERROR(cudaFree(table.pool));
-	HANDLE_ERROR(cudaFree(table.entries));
-}
-*/
 
 __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mod){
         unsigned long hash = 0; int c=0;
@@ -80,16 +33,13 @@ __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mo
         return hash % mod;
 }
 
-
-
-
-__device__ void put(unsigned char* key, Bucket* table){
-	unsigned long index = hash_sdbm(key, TABLE_SIZE);
+__device__ void put(unsigned char* key, Bucket* table, unsigned long mod){
+	unsigned long index = hash_sdbm(key, mod);
 	
 	table[index].lock.lock();
 	
 	//table[index]->key = key;
-	memcpy(table[index]->key, key, sizeof(*key));
+	memcpy(table[index].key, key, sizeof(*key));
 	table[index].count ++;
 	
 	table[index].lock.unlock();
@@ -98,16 +48,11 @@ __device__ void put(unsigned char* key, Bucket* table){
 
 }
 
-/*
-__device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mod){
-        unsigned long hash = 0; int c=0;
-        while (c = *str++)
-            hash = c + (hash << 6) + (hash << 16) - hash;
-       	//printf("hash value before mod: %lu, and ", hash );
-	//printf("mod: %lu\n", mod );
-	return hash % mod;
+__host__ __device__ void initTable(unsigned long size, Hashtable* table){
+	table = (Hashtable*)malloc(sizeof(Hashtable));	
+	
 }
-*/
+
 __device__ void tokenize (const char* string, char* nextToken){
 	//nextToken = strtok (string, ", .");
 }
