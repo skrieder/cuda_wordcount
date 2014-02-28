@@ -28,8 +28,8 @@ __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mo
         unsigned long hash = 0; int c=0;
         while (c = *str++)
             hash = c + (hash << 6) + (hash << 16) - hash;
-        //printf("hash value before mod: %lu, and ", hash );
-        //printf("mod: %lu\n", mod );
+        printf("hash value before mod: %lu, and ", hash );
+        printf("mod: %lu\n", mod );
         return hash % mod;
 }
 
@@ -61,19 +61,6 @@ void copy_table_to_host(const Hashtable &devTable, Hashtable &hostTable) {
 
 	HANDLE_ERROR(cudaMemcpy(hostTable.table, devTable.table, count* sizeof(Bucket), cudaMemcpyDeviceToHost) );
 }
-/*
-void copy_table_to_host(const Table &table, Table &hostTable) {
-	hostTable.count = table.count;
-	hostTable.entries = (Entry**) calloc(table.count, sizeof(Entry*));
-	hostTable.pool = (Entry*) malloc( ELEMENTS * sizeof(Entry));
-
-	HANDLE_ERROR(
-			cudaMemcpy(hostTable.entries, table.entries,
-					table.count * sizeof(Entry*), cudaMemcpyDeviceToHost));
-	HANDLE_ERROR(
-			cudaMemcpy( hostTable.pool, table.pool, ELEMENTS * sizeof( Entry ), cudaMemcpyDeviceToHost ));
-}
-*/
 
 __device__ void tokenize (const char* string, char* nextToken){
 	//nextToken = strtok (string, ", .");
@@ -83,6 +70,20 @@ __global__ void hashTest(unsigned char* str, unsigned long mod, unsigned long* h
 	*hashValue = hash_sdbm(str, mod);
 }
 
+__global__ void putTest(void){
+	printf("Now in the putTest on device. \n");
+	Hashtable * i_table;
+	initTable(4, i_table);
+        unsigned char* s1 = (unsigned char*) "abababab9";
+        unsigned char* s2 = (unsigned char*) "abababab10";
+        unsigned char* s3 = (unsigned char*) "cdababab9";
+        unsigned char* s4 = (unsigned char*) "cdababab10";	
+	put(s1, i_table->table, 4);
+	unsigned long index = hash_sdbm(s1, 4);
+	printf("original key = %s, find key = %s, count = %lu\n", s1, i_table->table[index].key, i_table->table[index].count); 	
+
+}
+
 __global__ void kernel( void ) {
 	
 }
@@ -90,10 +91,27 @@ __global__ void kernel( void ) {
 
 int main ()
 {
+
+		
+	
 	unsigned long hash_size = 1024*1024;
 	unsigned long hashValue =0;
   	unsigned char str[] ="This, a sample string.";
-	unsigned long mod =1000000;
+	unsigned long mod = 4;
+	char* s1 = "abababab9";
+	char* s2 = "abababab10";
+	char* s3 = "cdababab9";
+        char* s4 = "cdababab10";
+	printf("Before putTest\n");
+	putTest <<<1,1>>> ();
+	printf("After putTest\n");
+
+
+
+
+
+/*
+
 	TABLE_SIZE = mod;
 	unsigned char* dev_str;
 	unsigned long* dev_hashValue;
@@ -109,8 +127,7 @@ int main ()
 
 	printf("The string is \"%s\", the CPU computed hash value is %lu, and the GPU computed hash value is %lu\n", str, hash_sdbm(str, TABLE_SIZE), hashValue);  	
 	//kernel<<<1,1>>>();
-
-  
+  */
 
   return 0;
 }
