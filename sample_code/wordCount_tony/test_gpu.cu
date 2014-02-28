@@ -13,8 +13,8 @@
 
 unsigned long TABLE_SIZE = 0;
 struct Bucket{
-        char key[10];
-        unsigned long count;
+    char key[10];
+    unsigned long count;
 	Lock lock;
 };
 
@@ -48,9 +48,10 @@ __device__ void put(unsigned char* key, Bucket* table, unsigned long mod){
 
 }
 
-__host__ __device__ void initTable(unsigned long size, Hashtable* table){
-	table = (Hashtable*)malloc(sizeof(Hashtable));	
-	
+__host__ __device__ void initTable(unsigned long size, Hashtable* i_table){
+	i_table = (Hashtable*)malloc(sizeof(Hashtable));	
+	i_table.count = size;
+	i_table.table = (Bucket*)malloc(size * sizeof(Bucket));
 }
 
 __device__ void tokenize (const char* string, char* nextToken){
@@ -88,17 +89,7 @@ int main ()
 	printf("The string is \"%s\", the CPU computed hash value is %lu, and the GPU computed hash value is %lu\n", str, hash_sdbm(str, TABLE_SIZE), hashValue);  	
 	//kernel<<<1,1>>>();
 
-  /*
-  char * pch;
-  printf ("Splitting string \"%s\" into tokens:\n",str);
-  pch = strtok (str," ,.-");
-  while (pch != NULL)
-  {
-    printf ("%s\n",pch);
-    pch = strtok (NULL, " ,.-");
-  }
-  */
-
+  
 
   return 0;
 }
