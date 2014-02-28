@@ -50,9 +50,30 @@ __device__ void put(unsigned char* key, Bucket* table, unsigned long mod){
 
 __host__ __device__ void initTable(unsigned long size, Hashtable* i_table){
 	i_table = (Hashtable*)malloc(sizeof(Hashtable));	
-	i_table.count = size;
-	i_table.table = (Bucket*)malloc(size * sizeof(Bucket));
+	i_table->count = size;
+	i_table->table = (Bucket*)malloc(size * sizeof(Bucket));
 }
+
+void copy_table_to_host(const Hashtable &devTable, Hashtable &hostTable) {	
+	hostTable.count = devTable.count;
+	unsigned long count = devTable.count;
+	hostTable.table = (Bucket*) malloc(count * sizeof(Bucket));
+
+	HANDLE_ERROR(cudaMemcpy(hostTable.table, devTable.table, count* sizeof(Bucket), cudaMemcpyDeviceToHost) );
+}
+/*
+void copy_table_to_host(const Table &table, Table &hostTable) {
+	hostTable.count = table.count;
+	hostTable.entries = (Entry**) calloc(table.count, sizeof(Entry*));
+	hostTable.pool = (Entry*) malloc( ELEMENTS * sizeof(Entry));
+
+	HANDLE_ERROR(
+			cudaMemcpy(hostTable.entries, table.entries,
+					table.count * sizeof(Entry*), cudaMemcpyDeviceToHost));
+	HANDLE_ERROR(
+			cudaMemcpy( hostTable.pool, table.pool, ELEMENTS * sizeof( Entry ), cudaMemcpyDeviceToHost ));
+}
+*/
 
 __device__ void tokenize (const char* string, char* nextToken){
 	//nextToken = strtok (string, ", .");
