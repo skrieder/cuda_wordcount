@@ -4,6 +4,11 @@ Here is a list of things we need to do.
 2. Transfer the h_master_hashtable to the GPU (Scott current)
 3. Transfer the master_hashtable back to the host.
 4. Iterate through the master_hashtable. (Iman?)
+int iterate(Hashtable table){
+    forall items in table
+    	   print(key, value);
+    return 0;
+}
 
 5a. Test that the locks work in put_nc
 5b. Test that the locks work in get_nc
