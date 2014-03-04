@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <string.h> //no use in GPU
 
+
 #define SIZE    (100*1024*1024)
 #define ELEMENTS    (SIZE / sizeof(unsigned int))
 #define HASH_ENTRIES     1024
+
 
 unsigned long TABLE_SIZE = 0;
 struct Bucket{
@@ -22,18 +24,32 @@ struct Hashtable{
   //Lock lock[count];
 };
 
+__host__ __device__ void put_nc(unsigned char* key, Bucket* table, unsigned long mod);
+
+__device__ __host__ unsigned long get_nc(unsigned char* key, Hashtable *hashTable, unsigned long mod);
+
 //__global__ void parallel_insert_to_table(Hashtable d_master_hashtable, unsigned char **d_array, int num_threads){
 __global__ void parallel_insert_to_table(Hashtable d_master_hashtable, char *d_word, int num_threads){
 
   // assert in func
   printf("In parallel_insert_to_table\n");
 
-  char * temp_string = (char *)malloc(sizeof(char*)*4);
+  unsigned char * temp_string = (unsigned char *)malloc(sizeof(char*)*4);
+  //  printf("The temp string = %s\n", temp_string);
+
+  memcpy(temp_string, d_word, sizeof(unsigned char *)*4);
+
   printf("The temp string = %s\n", temp_string);
 
-  memcpy(temp_string, d_word, sizeof(char *)*4);
+  printf("before put\n");
+  put_nc(temp_string, d_master_hashtable.table, 4);
+  printf("after put_nc\n");
 
-  printf("The temp string = %s\n", temp_string);
+  unsigned long temp_int = get_nc(temp_string, &d_master_hashtable, 4);
+
+  printf("\n");
+
+  printf("After get_nc\n");
 
   // assert values in d_array
   //  printf("The word at d_array[0] = %s\n", d_array[0]);
@@ -55,7 +71,7 @@ void initialize_table( Hashtable &d_master_hashtable, int entries, int elements 
   //  HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Bucket)) );
 }
 
-unsigned int lenStr(unsigned char *str){
+__host__ __device__ unsigned int lenStr(unsigned char *str){
 	unsigned char *p=str;
 	while(*p!='\0')
 		p++;
@@ -142,13 +158,17 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 
 //put without collision handling
 __device__ __host__ void put_nc(unsigned char* key, Bucket* table, unsigned long mod){
-        unsigned long index = hash_sdbm(key, mod);
-
+  printf("In put_nc\n");
+  unsigned long index = hash_sdbm(key, mod);
+  printf("hash is set\n");
 //      table[index].lock.lock();
-        unsigned int l = lenStr(key);
-        memcpy(table[index].key, key, l+1 );
-        table[index].count ++;
+  unsigned int l = lenStr(key);
+  printf("before memcpy in put_nc\n");
+  memcpy(table[index].key, key, l+1 );
+  printf("after memcpy in put_nc\n");
+  table[index].count ++;
 //      table[index].lock.unlock();
+  printf("end of put_nc\n");
 }
 
 //get without collision handling
