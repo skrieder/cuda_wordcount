@@ -2,4 +2,7 @@ Here is a list of things we need to do.
 
 - Transfer an array of words to the device.
 - Allocate and initialize the hashtable on the host, and transfer that to the GPU
+- Transfer the master_hashtable back to the host.
+- Iterate through the master_hashtable.
 
+- Make the insert function parallel. (low priority, fairly easy)
