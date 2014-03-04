@@ -44,6 +44,9 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 	unsigned long index = hash_sdbm(key, mod);
 	
 //	table[index].lock.lock();
+// can't access key? not allocated???
+	memset(table[index].key, '\0', 11 * sizeof(char));
+        table[index].count = 0;
 	printf("put: pre-count =%ln\n", table[index].count); 
 	printf("put: pre-key=%s\n", table[index].key);
 	unsigned int l = lenStr(key);
@@ -58,15 +61,14 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 
 }
 
-__host__ __device__ void initTable(unsigned long size, Hashtable* i_table){
-	i_table = (Hashtable*)malloc(sizeof(Hashtable));	
-	i_table->count = size;
-	i_table->table = (Bucket*)malloc(size * sizeof(Bucket));
+__host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
+	*i_table = (Hashtable*)malloc(sizeof(Hashtable));	
+	(*i_table)->count = size;
+	(*i_table)->table = (Bucket*)malloc(size * sizeof(Bucket));
 	for(unsigned long i=0; i <= size; i++){
-		memset(i_table->table[i].key, '\0', 11 * sizeof(char));
-		i_table->table[i].count = 0;
-		
-		printf("init: blank count = %lu\n", i_table->table[i].count);
+		memset((*i_table)->table[i].key, '\0', 11 * sizeof(char));
+		(*i_table)->table[i].count = 0;
+		printf("init: blank count = %lu\n", (*i_table)->table[i].count);
 	}
 }
 
@@ -89,7 +91,7 @@ __global__ void hashTest(unsigned char* str, unsigned long mod, unsigned long* h
 __global__ void putTest(void){
 	printf("Now in the putTest on device. \n");
 	Hashtable * i_table;
-	initTable(4, i_table);
+	initTable(4, &i_table);
         unsigned char* s1 = (unsigned char*) "abab5";
         unsigned char* s2 = (unsigned char*) "abababab10";
         unsigned char* s3 = (unsigned char*) "cdababab9";
@@ -117,14 +119,11 @@ int main ()
 	printf("Before putTest\n");
 //	putTest <<<1,1>>> ();
 	printf("After putTest\n");
-	Hashtable i_table;
-	
-	
-
-
-
+	Hashtable *i_table; //&((i_table->table)[idx])
 	initTable(4, &i_table); //problem on this reference
-	put(s1, (&i_table)->table, 4);
+	printf("post-init key: %s\n",(*i_table).table[0].key);
+	printf("post-init count: %ln\n",(*i_table).table[0].count);
+	put(s1, ((*i_table).table), 4);
 //	put(s2, i_table->table, 4);
 //	put(s1, i_table->table, 4);
 //	put(s4, i_table->table, 4);
@@ -136,10 +135,6 @@ index = hash_sdbm(s3, 4);
       //  printf("original key = %s, find key = %s, count = %lu\n", s3, i_table->table[index].key, i_table->table[index].count);
 index = hash_sdbm(s4, 4);
       //  printf("original key = %s, find key = %s, count = %lu\n", s4, i_table->table[index].key, i_table->table[index].count);
-
-
-
-
 
 /*
 
