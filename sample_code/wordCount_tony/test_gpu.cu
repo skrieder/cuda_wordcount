@@ -282,16 +282,25 @@ int main ()
 	initTable(4, &h_master_hashtable);
 
 	// declare the device hashtable
-	Hashtable d_master_hashtable;
+	Hashtable *d_master_hashtable;
+
+	int size_of_hashtable = (sizeof(Hashtable)+ sizeof(Bucket*)*num_elements);
 
 	// allocate the device hashtable
-	err = cudaMalloc((void **)&d_master_hashtable, sizeof(Hashtable)+ sizeof(Bucket*)*num_elements);
+	err = cudaMalloc((void **)&d_master_hashtable, size_of_hashtable);
 	if (err != cudaSuccess){
 	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
 	  exit(EXIT_FAILURE);
 	}	
 
 	// copy the host table into the device table
+	printf("Before copy host table to d_table\n");
+	err = cudaMemcpy((void **)d_master_hashtable, (void **)h_master_hashtable, (size_t)size_of_hashtable, cudaMemcpyHostToDevice);
+	if (err != cudaSuccess){
+	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
+	  exit(EXIT_FAILURE);
+	}	
+	printf("After cudaMemcpy\n");
 	
 
 
@@ -333,10 +342,10 @@ int main ()
 	// launch GPU kernel
 	int num_threads = 1;
 	//	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_array, num_threads);
-	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_word, num_threads);
+	//	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_word, num_threads);
 	
 	// sync device
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
 
 	// bring back hashtable
 
