@@ -264,6 +264,9 @@ int main ()
         unsigned char* s3 = (unsigned char*) "Great";
         unsigned char* s4 = (unsigned char*) "Dayss";	
 
+	// set the number of elements
+	int num_elements = 4;
+
 	// set the array size
 	int array_size = sizeof(char*)*mod*6;
 
@@ -272,8 +275,25 @@ int main ()
 	unsigned char** d_array;
 
 	// init the table
+	//	Hashtable d_master_hashtable;
+	//initialize_table( d_master_hashtable, 4, 4);
+
+	Hashtable *h_master_hashtable;
+	initTable(4, &h_master_hashtable);
+
+	// declare the device hashtable
 	Hashtable d_master_hashtable;
-	initialize_table( d_master_hashtable, 4, 4);
+
+	// allocate the device hashtable
+	err = cudaMalloc((void **)&d_master_hashtable, sizeof(Hashtable)+ sizeof(Bucket*)*num_elements);
+	if (err != cudaSuccess){
+	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
+	  exit(EXIT_FAILURE);
+	}	
+
+	// copy the host table into the device table
+	
+
 
 	// hard code the arrays
 	h_array[0] = s1;
@@ -298,7 +318,7 @@ int main ()
 	printf("After cudaMalloc of d_array\n");
 
 	// copy h_array into d_array
-	cudaMemcpy(d_array, h_array, array_size, cudaMemcpyHostToDevice);
+	err = cudaMemcpy(d_array, h_array, array_size, cudaMemcpyHostToDevice);
 	if (err != cudaSuccess){
 	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
 	  exit(EXIT_FAILURE);
