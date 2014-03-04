@@ -13,7 +13,7 @@
 
 unsigned long TABLE_SIZE = 0;
 struct Bucket{
-	char key[10];
+	unsigned char key[10];
 	unsigned long count;
 	Lock lock;
 	Bucket* next_collision;
@@ -32,7 +32,7 @@ unsigned int lenStr(unsigned char *str){
 	return(p-str);
 }
 
-int strCmp(const char *temp1,const char *temp2){
+int strCmp(unsigned char *temp1,unsigned char *temp2){
     while(*temp1 && *temp2){
         if(*temp1==*temp2){
             temp1++;
@@ -50,6 +50,17 @@ int strCmp(const char *temp1,const char *temp2){
     return 0; //return 0 when strings are same
 }
 
+void rand_str(unsigned char *dest, size_t length) {
+	unsigned char charset[] = "0123456789"
+                     "abcdefghijklmnopqrstuvwxyz"
+                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    while (length-- > 0) {
+        size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
+        *dest++ = charset[index];
+    }
+    *dest = '\0';
+}
 
 __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mod){
         unsigned long hash = 0; int c=0;
@@ -70,6 +81,23 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 //	printf("put: pre-key=%s\n",(table)[index].key);
 	unsigned int l = lenStr(key);
 //	printf("key len=%d\n",l);
+	Bucket* p = &(table[index]);
+	while(0 != strCmp(key, p->key) && NULL != p->next_collision){ //if find collision
+		p = p->next_collision;
+		
+		
+	}//key and p.key are same string, or need a new collision slot.
+		
+	if(0 == strCmp(key, p->key )){ //find existing token
+		memcpy(p->key, key, l+1 );
+		p->count ++;
+	}else{ //need a new collision slot
+		p->next_collision = (Bucket*)malloc(sizeof(Bucket));
+		memcpy(p->next_collision->key, key, l+1);
+		p->next_collision->count =1;
+		p->next_collision->next_collision = NULL;
+	}
+
 	if(NULL == table[index].next_collision){
 		if(1){
 		}	
@@ -171,17 +199,38 @@ int main ()
 //	putTest <<<1,1>>> ();
 //	printf("After putTest\n");
 	Hashtable *i_table; //&((i_table->table)[idx])
-	initTable(4, &i_table); //problem on this reference
-	printf("post-init key: %s\n",(*i_table).table[0].key);
-	printf("post-init count: %lu\n",(*i_table).table[0].count);
-	put_nc(s1, ((i_table)->table), 4);
-	put_nc(s2, i_table->table, 4);
-	put_nc(s1, i_table->table, 4);
-	put_nc(s4, i_table->table, 4);
-	printf("get s1, count= %lu\n",get_nc(s1, i_table, 4));
-        unsigned long index = hash_sdbm(s1, 4);
+	initTable(mod, &i_table); //problem on this reference
+//	printf("post-init key: %s\n",(*i_table).table[0].key);
+//	printf("post-init count: %lu\n",(*i_table).table[0].count);
+//	put(s1, ((i_table)->table), mod);
+//	put_nc(s2, i_table->table, mod);
+//	put_nc(s1, i_table->table, mod);
+//	put_nc(s4, i_table->table, mod);
+//	printf("get s1, count= %lu\n",get_nc(s1, i_table, mod));
+
+	int i=0;
+	for(i=0;i<10;i++){
+		unsigned char* str = (unsigned char*) malloc(10 * sizeof(char));
+		rand_str(str, 10);
+		printf("%s\n",str);
+		put(str, ((i_table)->table), mod);
+	}
 	
+	for(i=0;i < mod;i++){
+		Bucket* p = &((i_table)->table[i]);
+		printf("index %d:\n",i);
+		printf("key: %s\,  ", p->key);
+		printf("count: %lu\n",p->count);
+		while(NULL != p->next_collision){
+			printf("key: %s\,  ", p->key);
+	                printf("count: %lu\n\n",p->count);
+			p = p->next_collision;
+		}
+	}
+
+/*	
 	Bucket* item = (Bucket*)calloc(1, sizeof(Bucket));
+
 	item = it_goto_entry(i_table, 5);
 //	printf("iter key: %s\n",item->key);
  //       printf("inter count: %lu\n",item->count);
@@ -192,6 +241,10 @@ int main ()
 		printf("iter key: %s\n",item->key);	
 		printf("inter count: %lu\n",item->count);
 	}
+
+*/
+
+
 
 /*
 
