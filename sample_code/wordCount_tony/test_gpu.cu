@@ -197,7 +197,11 @@ int main ()
         unsigned char* s3 = (unsigned char*) "Great";
         unsigned char* s4 = (unsigned char*) "Dayss";	
 
+	// allocate the host array and table
 	unsigned char** h_array = (unsigned char **)calloc(1, sizeof(char*)*mod*6);
+	Hashtable *i_table; //&((i_table->table)[idx])
+	initTable(mod, &i_table); //problem on this reference
+
 
 	h_array[0] = s1;
 	h_array[1] = s2;
@@ -226,8 +230,6 @@ int main ()
 //	printf("Before putTest\n");
 //	putTest <<<1,1>>> ();
 //	printf("After putTest\n");
-	Hashtable *i_table; //&((i_table->table)[idx])
-	initTable(mod, &i_table); //problem on this reference
 //	printf("post-init key: %s\n",(*i_table).table[0].key);
 //	printf("post-init count: %lu\n",(*i_table).table[0].count);
 //	put(s1, ((i_table)->table), mod);
