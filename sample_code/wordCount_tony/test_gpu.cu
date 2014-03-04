@@ -189,12 +189,20 @@ int main ()
 {
 	unsigned long hash_size = 1024*1024;
 	unsigned long hashValue =0;
-  	unsigned char str[] ="This, a sample string.";
-	unsigned long mod = 4;
-        unsigned char* s1 = (unsigned char*) "abab567";
-        unsigned char* s2 = (unsigned char*) "abababab10";
-        unsigned char* s3 = (unsigned char*) "cdababab9";
-        unsigned char* s4 = (unsigned char*) "cdababa8";	
+  	unsigned char str[] ="Hello World Great Day"; // Tokenize this string TODO
+	unsigned long mod = 4; // auto gen this number TODO
+	
+        unsigned char* s1 = (unsigned char*) "Hello";
+        unsigned char* s2 = (unsigned char*) "World";
+        unsigned char* s3 = (unsigned char*) "Great";
+        unsigned char* s4 = (unsigned char*) "Dayss";	
+
+	unsigned char** h_array = (unsigned char **)calloc(1, sizeof(char*)*mod*6);
+
+	h_array[0] = s1;
+
+	printf("The word at h_array[0] = %s\n", h_array[0]);
+
 //	printf("Before putTest\n");
 //	putTest <<<1,1>>> ();
 //	printf("After putTest\n");
@@ -208,6 +216,9 @@ int main ()
 //	put_nc(s4, i_table->table, mod);
 //	printf("get s1, count= %lu\n",get_nc(s1, i_table, mod));
 
+	// send to GPU
+
+	// insert sample strings to table
 	int i=0;
 	for(i=0;i<10;i++){
 		unsigned char* str = (unsigned char*) malloc(10 * sizeof(char));

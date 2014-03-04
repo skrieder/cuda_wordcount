@@ -24,5 +24,6 @@ int main(){
 
 __device__ void cuda_wordcount(hashtable d_hashtable, char **array, int num_threads){
   // parallel insert into table
-  
+  for(){
+  }
 }
