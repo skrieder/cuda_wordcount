@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include "wordcount_helper.h"
+
 char str[100];
 enum {NOT_FOUND=0,FOUND};
 static char *ptr;
