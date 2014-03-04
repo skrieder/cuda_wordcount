@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <string.h> //no use in GPU
 
-
-
-
 #define SIZE    (100*1024*1024)
 #define ELEMENTS    (SIZE / sizeof(unsigned int))
 #define HASH_ENTRIES     1024
@@ -22,8 +19,32 @@ struct Bucket{
 struct Hashtable{
 	unsigned long table_size;
 	Bucket* table; // table has to be of length count
-	//Lock lock[count];
+  //Lock lock[count];
 };
+
+__global__ void parallel_insert_to_table(Hashtable d_master_hashtable, unsigned char **d_array, int num_threads){
+  // assert in func
+  printf("In parallel_insert_to_table\n");
+
+  // assert values in d_array
+  printf("The word at d_array[0] = %s\n", d_array[0]);
+  //  printf("The word at d_array[1] = %s\n", d_array[1]);
+  //printf("The word at d_array[2] = %s\n", d_array[2]);
+  //printf("The word at d_array[3] = %s\n", d_array[3]);
+
+
+  // assert end func
+  printf("End of parallel_insert_to_table\n");
+}
+
+// TODO fix this
+void initialize_table( Hashtable &d_master_hashtable, int entries, int elements ) {
+  d_master_hashtable.table_size = entries;
+  printf("The size of a bucket pointer = %d\n", sizeof(Bucket *));
+  cudaMalloc( (void**)&d_master_hashtable.table, entries * sizeof(Bucket*));
+  cudaMemset( d_master_hashtable.table, 0, entries * sizeof(Bucket*));
+  //  HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Bucket)) );
+}
 
 unsigned int lenStr(unsigned char *str){
 	unsigned char *p=str;
@@ -187,9 +208,13 @@ __global__ void kernel( void ) {
 
 int main ()
 {
-	unsigned long hash_size = 1024*1024;
-	unsigned long hashValue =0;
-  	unsigned char str[] ="Hello World Great Day"; // Tokenize this string TODO
+  // catch errors yo
+  cudaError_t err = cudaSuccess;
+
+        // start of main
+        unsigned long hash_size = 1024*1024;
+        unsigned long hashValue =0;
+        unsigned char str[] ="Hello World Great Dayss"; // Tokenize this string TODO
 	unsigned long mod = 4; // auto gen this number TODO
 	
         unsigned char* s1 = (unsigned char*) "Hello";
@@ -197,25 +222,53 @@ int main ()
         unsigned char* s3 = (unsigned char*) "Great";
         unsigned char* s4 = (unsigned char*) "Dayss";	
 
+	// set the array size
+	int array_size = sizeof(char*)*mod*6;
+
 	// allocate the host array and table
-	unsigned char** h_array = (unsigned char **)calloc(1, sizeof(char*)*mod*6);
-	Hashtable *i_table; //&((i_table->table)[idx])
-	initTable(mod, &i_table); //problem on this reference
+	unsigned char** h_array = (unsigned char **)calloc(1, array_size);
+	unsigned char** d_array;
 
+	// init the table
+	Hashtable d_master_hashtable;
+	initialize_table( d_master_hashtable, 4, 4);
 
+	// hard code the arrays
 	h_array[0] = s1;
 	h_array[1] = s2;
 	h_array[2] = s3;
 	h_array[3] = s4;
 
+	// assert the arrays
 	printf("The word at h_array[0] = %s\n", h_array[0]);
 	printf("The word at h_array[1] = %s\n", h_array[1]);
 	printf("The word at h_array[2] = %s\n", h_array[2]);
 	printf("The word at h_array[3] = %s\n", h_array[3]);
 
-	// move to GPU
+
+	// allocate the d_array
+	printf("Before cudaMalloc\n");
+	err = cudaMalloc((void **)&d_array, array_size);
+	if (err != cudaSuccess){
+	  fprintf(stderr, "Failed to allocate the d_array(error code %s)!\n", cudaGetErrorString(err));
+	  exit(EXIT_FAILURE);
+	}	
+	printf("After cudaMalloc of d_array\n");
+
+	// copy h_array into d_array
+	cudaMemcpy(d_array, h_array, array_size, cudaMemcpyHostToDevice);
+	if (err != cudaSuccess){
+	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
+	  exit(EXIT_FAILURE);
+	}	
+	printf("After cudaMemcpy\n");
 
 	// launch GPU kernel
+	int num_threads = 1;
+	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_array, num_threads);
+	
+	// sync device
+	cudaDeviceSynchronize();
 
 	// bring back hashtable
 
