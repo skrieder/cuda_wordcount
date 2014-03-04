@@ -1,15 +1,20 @@
 Here is a list of things we need to do.
 
-- Transfer an array of words to the device.
-- Allocate and initialize the hashtable on the host, and transfer that to the GPU
-- Transfer the master_hashtable back to the host.
-- Iterate through the master_hashtable.
+1. Transfer an array of words to the device.
+2. Transfer the h_master_hashtable to the GPU (Scott current)
+3. Transfer the master_hashtable back to the host.
+4. Iterate through the master_hashtable. (Iman?)
+int iterate(Hashtable table){
+    forall items in table
+    	   print(key, value);
+    return 0;
+}
 
-- Test that the locks work in put_nc
-- Test that the locks work in get_nc
+5a. Test that the locks work in put_nc
+5b. Test that the locks work in get_nc
 
-- Make the insert function parallel. (low priority, fairly easy)
+6. Make the insert function parallel. (low priority, fairly easy)
 
-- Parallel tokenize on GPU
+7. Parallel tokenize on GPU (Tony)
 
-- Give the students a simple example of put and get.
+8. Give the students a simple example of put and get.
