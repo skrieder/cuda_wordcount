@@ -150,7 +150,7 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 		}	
 	}
 	memcpy(table[index].key, key, l+1 );
-//	printf("get key=%s\n", table[index].key);
+	printf("put: key=%s\, index=%lu \n", key, index);
 	table[index].count ++;
 //	printf("put: post-count =%lu\n", table[index].count);
 //	printf("put: post-key=%s\n", table[index].key);
@@ -389,7 +389,7 @@ int main ()
 	/* uncomment to test collision	
 	for(i=0;i < mod;i++){
 		Bucket* p = &((i_table)->table[i]);
-		printf("index %d:\n",i);
+		printf("index %d  -----------------:\n",i);
 		printf("key: %s\,  ", p->key);
 		printf("count: %lu\n",p->count);
 		while(NULL != p->next_collision){
