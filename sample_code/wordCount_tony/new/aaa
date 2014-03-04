@@ -1,0 +1,3 @@
+Text files are files containing sequences of lines of text. Depending on the environment where the application runs, some special character conversion may occur in input/output operations in text mode to adapt them to a system-specific text file format. Although on some environments no conversions occur and both text files and binary files are treated the same way, using the appropriate mode improves portability.
+
+For files open for update (those which include a "+" sign), on which both input and output operations are allowed, the stream should be flushed (fflush) or repositioned (fseek, fsetpos, rewind) between either a writing operation followed by a reading operation or a reading operation which did not reach the end-of-file followed by a writing operation.
