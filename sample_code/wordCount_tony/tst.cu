@@ -31,7 +31,7 @@ __device__ __host__ unsigned long get_nc(unsigned char* key, Hashtable *hashTabl
 __host__ __device__ void initTable(unsigned long size, Hashtable** i_table);
 
 __host__ int iterate(Hashtable final_table){
-
+	int i = 0;
 	FILE *f = fopen("file.txt", "w");
 	if (f == NULL)
 		{
