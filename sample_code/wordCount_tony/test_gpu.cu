@@ -47,7 +47,7 @@ __global__ void parallel_insert_to_table(Hashtable d_master_hashtable, char *d_w
 
   unsigned long temp_int = get_nc(temp_string, &d_master_hashtable, 4);
 
-  printf("\n");
+  printf("The temp_int = %lu\n", temp_int);
 
   printf("After get_nc\n");
 
