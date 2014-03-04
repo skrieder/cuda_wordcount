@@ -22,12 +22,21 @@ struct Hashtable{
   //Lock lock[count];
 };
 
-__global__ void parallel_insert_to_table(Hashtable d_master_hashtable, unsigned char **d_array, int num_threads){
+//__global__ void parallel_insert_to_table(Hashtable d_master_hashtable, unsigned char **d_array, int num_threads){
+__global__ void parallel_insert_to_table(Hashtable d_master_hashtable, char *d_word, int num_threads){
+
   // assert in func
   printf("In parallel_insert_to_table\n");
 
+  char * temp_string = (char *)malloc(sizeof(char*)*4);
+  printf("The temp string = %s\n", temp_string);
+
+  memcpy(temp_string, d_word, sizeof(char *)*4);
+
+  printf("The temp string = %s\n", temp_string);
+
   // assert values in d_array
-  printf("The word at d_array[0] = %s\n", d_array[0]);
+  //  printf("The word at d_array[0] = %s\n", d_array[0]);
   //  printf("The word at d_array[1] = %s\n", d_array[1]);
   //printf("The word at d_array[2] = %s\n", d_array[2]);
   //printf("The word at d_array[3] = %s\n", d_array[3]);
@@ -263,9 +272,15 @@ int main ()
 	}	
 	printf("After cudaMemcpy\n");
 
+	char *h_word = "Hello";
+	char *d_word;
+	cudaMalloc((void**)&d_word, (size_t)sizeof(char *)*6);
+	cudaMemcpy(d_word, h_word, (sizeof(char *)*6), cudaMemcpyHostToDevice);
+
 	// launch GPU kernel
 	int num_threads = 1;
-	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_array, num_threads);
+	//	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_array, num_threads);
+	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_word, num_threads);
 	
 	// sync device
 	cudaDeviceSynchronize();
