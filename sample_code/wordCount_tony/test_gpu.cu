@@ -48,7 +48,8 @@ __global__ void parallel_insert_to_table(Hashtable d_master_hashtable, char *d_w
 
   printf("before put\n");
   //  put_nc(temp_string, d_master_hashtable.table, 4);
-  put_nc(temp_string, test_table.table, 4);
+  put_nc(temp_string, test_table->table, 4);
+  put_nc(temp_string, test_table->table, 4);
   printf("after put_nc\n");
 
   unsigned long temp_int = get_nc(temp_string, test_table, 4);
