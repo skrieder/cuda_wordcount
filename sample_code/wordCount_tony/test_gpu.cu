@@ -13,9 +13,10 @@
 
 unsigned long TABLE_SIZE = 0;
 struct Bucket{
-    char key[10];
-    unsigned long count;
+	char key[10];
+	unsigned long count;
 	Lock lock;
+	Bucket* next_collision;
 };
 
 struct Hashtable{
@@ -30,6 +31,25 @@ unsigned int lenStr(unsigned char *str){
 		p++;
 	return(p-str);
 }
+
+int strCmp(const char *temp1,const char *temp2){
+    while(*temp1 && *temp2){
+        if(*temp1==*temp2){
+            temp1++;
+            temp2++;
+        }
+        else{
+            if(*temp1<*temp2){
+                return -1;  
+            }
+            else{
+                return 1;
+            }
+        }
+    }
+    return 0; //return 0 when strings are same
+}
+
 
 __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mod){
         unsigned long hash = 0; int c=0;
@@ -50,6 +70,10 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 //	printf("put: pre-key=%s\n",(table)[index].key);
 	unsigned int l = lenStr(key);
 //	printf("key len=%d\n",l);
+	if(NULL == table[index].next_collision){
+		if(1){
+		}	
+	}
 	memcpy(table[index].key, key, l+1 );
 //	printf("get key=%s\n", table[index].key);
 	table[index].count ++;
@@ -58,7 +82,19 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 //	table[index].lock.unlock();
 }
 
-__device__ __host__ unsigned long get(unsigned char* key, Hashtable *hashTable, unsigned long mod){
+//put without collision handling
+__device__ __host__ void put_nc(unsigned char* key, Bucket* table, unsigned long mod){
+        unsigned long index = hash_sdbm(key, mod);
+
+//      table[index].lock.lock();
+        unsigned int l = lenStr(key);
+        memcpy(table[index].key, key, l+1 );
+        table[index].count ++;
+//      table[index].lock.unlock();
+}
+
+//get without collision handling
+__device__ __host__ unsigned long get_nc(unsigned char* key, Hashtable *hashTable, unsigned long mod){
 	unsigned long index = hash_sdbm(key, mod);
 	//printf("\n\n get count=%lu\n",(hashTable->table[index].count));
 	return (hashTable->table[index].count);
@@ -71,12 +107,11 @@ __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
 	for(unsigned long i=0; i <= size; i++){
 		memset((*i_table)->table[i].key, '\0', 11 * sizeof(char));
 		(*i_table)->table[i].count = 0;
+		(*i_table)->table[i].next_collision = NULL;
 //		printf("init: blank count = %lu\n", (*i_table)->table[i].count);
 	}
 }
 
-__device__ __host__ void it_go_head(){
-}
 
 __device__ __host__ Bucket* it_goto_entry(Hashtable *hashTable, unsigned long index){
 	if(index <= (*hashTable).table_size){
@@ -139,11 +174,11 @@ int main ()
 	initTable(4, &i_table); //problem on this reference
 	printf("post-init key: %s\n",(*i_table).table[0].key);
 	printf("post-init count: %lu\n",(*i_table).table[0].count);
-	put(s1, ((i_table)->table), 4);
-	put(s2, i_table->table, 4);
-	put(s1, i_table->table, 4);
-	put(s4, i_table->table, 4);
-	printf("get s1, count= %lu\n",get(s1, i_table, 4));
+	put_nc(s1, ((i_table)->table), 4);
+	put_nc(s2, i_table->table, 4);
+	put_nc(s1, i_table->table, 4);
+	put_nc(s4, i_table->table, 4);
+	printf("get s1, count= %lu\n",get_nc(s1, i_table, 4));
         unsigned long index = hash_sdbm(s1, 4);
 	
 	Bucket* item = (Bucket*)calloc(1, sizeof(Bucket));
@@ -151,7 +186,7 @@ int main ()
 //	printf("iter key: %s\n",item->key);
  //       printf("inter count: %lu\n",item->count);
 	
-	if(item == NULL)
+	if(NULL == item )
                 printf("invalid index\n");
         else{
 		printf("iter key: %s\n",item->key);	
