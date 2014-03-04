@@ -117,7 +117,7 @@ __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mo
 //        printf("mod: %lu\n", mod );
         return hash % mod;
 }
-
+/*
 __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mod){
 	unsigned long index = hash_sdbm(key, mod);
 	
@@ -156,7 +156,7 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 //	printf("put: post-key=%s\n", table[index].key);
 //	table[index].lock.unlock();
 }
-
+*/
 //put without collision handling
 __device__ __host__ void put_nc(unsigned char* key, Bucket* table, unsigned long mod){
 //      table[index].lock.lock();
@@ -245,9 +245,9 @@ __global__ void putTest(void){
 	Hashtable * i_table;
 	initTable(4, &i_table);
         unsigned char* s1 = (unsigned char*) "abab5";
-        unsigned char* s2 = (unsigned char*) "abababab10";
-        unsigned char* s3 = (unsigned char*) "cdababab9";
-        unsigned char* s4 = (unsigned char*) "cdababab10";	
+	//        unsigned char* s2 = (unsigned char*) "abababab10";
+        //unsigned char* s3 = (unsigned char*) "cdababab9";
+        //unsigned char* s4 = (unsigned char*) "cdababab10";	
 //	put(s1, i_table->table, 4);
 	unsigned long index = hash_sdbm(s1, 4);
 
@@ -263,9 +263,9 @@ int main ()
   cudaError_t err = cudaSuccess;
 
         // start of main
-        unsigned long hash_size = 1024*1024;
-        unsigned long hashValue =0;
-        unsigned char str[] ="Hello World Great Dayss"; // Tokenize this string TODO
+  //        unsigned long hash_size = 1024*1024;
+  //        unsigned long hashValue =0;
+  //unsigned char str[] ="Hello World Great Dayss"; // Tokenize this string TODO
 	unsigned long mod = 4; // auto gen this number TODO
 	
         unsigned char* s1 = (unsigned char*) "Hello";
