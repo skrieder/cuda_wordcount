@@ -28,8 +28,13 @@ __host__ __device__ void put_nc(unsigned char* key, Bucket* table, unsigned long
 
 __device__ __host__ unsigned long get_nc(unsigned char* key, Hashtable *hashTable, unsigned long mod);
 
+__host__ __device__ void initTable(unsigned long size, Hashtable** i_table);
+
 //__global__ void parallel_insert_to_table(Hashtable d_master_hashtable, unsigned char **d_array, int num_threads){
 __global__ void parallel_insert_to_table(Hashtable d_master_hashtable, char *d_word, int num_threads){
+
+  Hashtable *test_table;
+  initTable(4, &test_table);
 
   // assert in func
   printf("In parallel_insert_to_table\n");
@@ -42,10 +47,12 @@ __global__ void parallel_insert_to_table(Hashtable d_master_hashtable, char *d_w
   printf("The temp string = %s\n", temp_string);
 
   printf("before put\n");
-  put_nc(temp_string, d_master_hashtable.table, 4);
+  //  put_nc(temp_string, d_master_hashtable.table, 4);
+  put_nc(temp_string, test_table.table, 4);
   printf("after put_nc\n");
 
-  unsigned long temp_int = get_nc(temp_string, &d_master_hashtable, 4);
+  unsigned long temp_int = get_nc(temp_string, test_table, 4);
+  //  unsigned long temp_int = get_nc(temp_string, &d_master_hashtable, 4);
 
   printf("The temp_int = %lu\n", temp_int);
 
@@ -182,6 +189,7 @@ __device__ __host__ unsigned long get_nc(unsigned char* key, Hashtable *hashTabl
 }
 
 __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
+  printf("Start of initTable\n");
 	*i_table = (Hashtable*)malloc(sizeof(Hashtable));	
 	(*i_table)->table_size = size;
 	(*i_table)->table = (Bucket*)malloc(size * sizeof(Bucket));
@@ -191,6 +199,7 @@ __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
 		(*i_table)->table[i].next_collision = NULL;
 //		printf("init: blank count = %lu\n", (*i_table)->table[i].count);
 	}
+	printf("End of initTable\n");
 }
 
 
