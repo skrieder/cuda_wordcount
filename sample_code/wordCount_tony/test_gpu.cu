@@ -150,7 +150,7 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 		}	
 	}
 	memcpy(table[index].key, key, l+1 );
-	printf("put: key=%s\, index=%lu \n", key, index);
+	printf("put: key=%s, index=%lu \n", key, index);
 	table[index].count ++;
 //	printf("put: post-count =%lu\n", table[index].count);
 //	printf("put: post-key=%s\n", table[index].key);
@@ -172,6 +172,10 @@ __device__ __host__ void put_nc(unsigned char* key, Bucket* table, unsigned long
 
   // print the value of size
   printf("size to copy %d\n", l+1);
+
+  printf("Trying to set the key at table index %lu\n", index);
+
+  printf("Which has a current count of %lu\n", table[index].count);
 
   // sometimes this copy fails...
   memcpy(table[index].key, key, l+1 );
@@ -209,17 +213,16 @@ __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
 	printf("End of initTable\n");
 }
 
-
+/*
 __device__ __host__ Bucket* it_goto_entry(Hashtable *hashTable, unsigned long index){
 	if(index <= (*hashTable).table_size){
 		Bucket* ret = (Bucket*)malloc(sizeof(Bucket*));
 		ret = &(hashTable->table[index]);
-		
 	}
 	else
 		return NULL;
 }
-
+*/
 
 void copy_table_to_host(const Hashtable &devTable, Hashtable &hostTable) {	
 	hostTable.table_size = devTable.table_size;
