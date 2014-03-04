@@ -200,8 +200,28 @@ int main ()
 	unsigned char** h_array = (unsigned char **)calloc(1, sizeof(char*)*mod*6);
 
 	h_array[0] = s1;
+	h_array[1] = s2;
+	h_array[2] = s3;
+	h_array[3] = s4;
 
 	printf("The word at h_array[0] = %s\n", h_array[0]);
+	printf("The word at h_array[1] = %s\n", h_array[1]);
+	printf("The word at h_array[2] = %s\n", h_array[2]);
+	printf("The word at h_array[3] = %s\n", h_array[3]);
+
+	// move to GPU
+
+	// launch GPU kernel
+
+	// bring back hashtable
+
+	// iterate hash table
+
+	// clean memory
+
+	// return
+
+	/* Everything past here is old code to be merged in.*/
 
 //	printf("Before putTest\n");
 //	putTest <<<1,1>>> ();
@@ -219,14 +239,17 @@ int main ()
 	// send to GPU
 
 	// insert sample strings to table
+	/*
 	int i=0;
+
 	for(i=0;i<10;i++){
 		unsigned char* str = (unsigned char*) malloc(10 * sizeof(char));
 		rand_str(str, 10);
 		printf("%s\n",str);
 		put(str, ((i_table)->table), mod);
 	}
-	
+	*/
+	/* uncomment to test collision	
 	for(i=0;i < mod;i++){
 		Bucket* p = &((i_table)->table[i]);
 		printf("index %d:\n",i);
@@ -238,6 +261,7 @@ int main ()
 			p = p->next_collision;
 		}
 	}
+	*/
 
 /*	
 	Bucket* item = (Bucket*)calloc(1, sizeof(Bucket));
