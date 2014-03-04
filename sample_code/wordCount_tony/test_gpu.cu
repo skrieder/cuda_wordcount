@@ -44,9 +44,8 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 	unsigned long index = hash_sdbm(key, mod);
 	
 //	table[index].lock.lock();
-// can't access key? not allocated???
-	memset((table)[index].key, '\0', 11 * sizeof(char));
-       (table)[index].count = 0;
+//	memset((table)[index].key, '\0', 11 * sizeof(char));
+//       (table)[index].count = 0;
 	printf("put: pre-count =%lu\n", (table)[index].count); 
 	printf("put: pre-key=%s\n",(table)[index].key);
 	unsigned int l = lenStr(key);
@@ -57,8 +56,12 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 	printf("put: post-count =%lu\n", table[index].count);
 	printf("put: post-key=%s\n", table[index].key);
 //	table[index].lock.unlock();
-	
+}
 
+__device__ __host__ unsigned long get(unsigned char* key, Hashtable *hashTable, unsigned long mod){
+	unsigned long index = hash_sdbm(key, mod);
+	//printf("\n\n get count=%lu\n",(hashTable->table[index].count));
+	return (hashTable->table[index].count);
 }
 
 __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
@@ -124,9 +127,10 @@ int main ()
 	printf("post-init key: %s\n",(*i_table).table[0].key);
 	printf("post-init count: %lu\n",(*i_table).table[0].count);
 	put(s1, ((i_table)->table), 4);
-//	put(s2, i_table->table, 4);
-//	put(s1, i_table->table, 4);
-//	put(s4, i_table->table, 4);
+	put(s2, i_table->table, 4);
+	put(s1, i_table->table, 4);
+	put(s4, i_table->table, 4);
+	printf("get s1, count= %lu\n",get(s1, i_table, 4));
         unsigned long index = hash_sdbm(s1, 4);
       //  printf("original key = %s, find key = %s, count = %lu\n", s1, i_table->table[index].key, i_table->table[index].count);
 index = hash_sdbm(s2, 4);
