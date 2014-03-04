@@ -173,9 +173,12 @@ __device__ __host__ void put_nc(unsigned char* key, Bucket* table, unsigned long
 
 //get without collision handling
 __device__ __host__ unsigned long get_nc(unsigned char* key, Hashtable *hashTable, unsigned long mod){
-	unsigned long index = hash_sdbm(key, mod);
-	//printf("\n\n get count=%lu\n",(hashTable->table[index].count));
-	return (hashTable->table[index].count);
+  printf("In get_nc\n");
+  printf("The input key = %s\n", key);
+  unsigned long index = hash_sdbm(key, mod);
+  //printf("\n\n get count=%lu\n",(hashTable->table[index].count));
+  printf("The key is = %s\n", hashTable->table[index].key);
+  return (hashTable->table[index].count);
 }
 
 __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
