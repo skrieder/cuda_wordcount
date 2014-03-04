@@ -48,7 +48,8 @@ __global__ void parallel_insert_to_table(Hashtable d_master_hashtable, char *d_w
 
   printf("before put\n");
   //  put_nc(temp_string, d_master_hashtable.table, 4);
-  put_nc(temp_string, test_table.table, 4);
+  put_nc(temp_string, test_table->table, 4);
+  put_nc(temp_string, test_table->table, 4);
   printf("after put_nc\n");
 
   unsigned long temp_int = get_nc(temp_string, test_table, 4);
@@ -263,6 +264,9 @@ int main ()
         unsigned char* s3 = (unsigned char*) "Great";
         unsigned char* s4 = (unsigned char*) "Dayss";	
 
+	// set the number of elements
+	int num_elements = 4;
+
 	// set the array size
 	int array_size = sizeof(char*)*mod*6;
 
@@ -271,8 +275,34 @@ int main ()
 	unsigned char** d_array;
 
 	// init the table
-	Hashtable d_master_hashtable;
-	initialize_table( d_master_hashtable, 4, 4);
+	//	Hashtable d_master_hashtable;
+	//initialize_table( d_master_hashtable, 4, 4);
+
+	Hashtable *h_master_hashtable;
+	initTable(4, &h_master_hashtable);
+
+	// declare the device hashtable
+	Hashtable *d_master_hashtable;
+
+	int size_of_hashtable = (sizeof(Hashtable)+ sizeof(Bucket*)*num_elements);
+
+	// allocate the device hashtable
+	err = cudaMalloc((void **)&d_master_hashtable, size_of_hashtable);
+	if (err != cudaSuccess){
+	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
+	  exit(EXIT_FAILURE);
+	}	
+
+	// copy the host table into the device table
+	printf("Before copy host table to d_table\n");
+	err = cudaMemcpy((void **)d_master_hashtable, (void **)h_master_hashtable, (size_t)size_of_hashtable, cudaMemcpyHostToDevice);
+	if (err != cudaSuccess){
+	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
+	  exit(EXIT_FAILURE);
+	}	
+	printf("After cudaMemcpy\n");
+	
+
 
 	// hard code the arrays
 	h_array[0] = s1;
@@ -297,7 +327,7 @@ int main ()
 	printf("After cudaMalloc of d_array\n");
 
 	// copy h_array into d_array
-	cudaMemcpy(d_array, h_array, array_size, cudaMemcpyHostToDevice);
+	err = cudaMemcpy(d_array, h_array, array_size, cudaMemcpyHostToDevice);
 	if (err != cudaSuccess){
 	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
 	  exit(EXIT_FAILURE);
@@ -312,10 +342,10 @@ int main ()
 	// launch GPU kernel
 	int num_threads = 1;
 	//	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_array, num_threads);
-	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_word, num_threads);
+	//	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_word, num_threads);
 	
 	// sync device
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
 
 	// bring back hashtable
 
