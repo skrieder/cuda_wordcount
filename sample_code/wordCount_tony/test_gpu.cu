@@ -45,16 +45,16 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 	
 //	table[index].lock.lock();
 // can't access key? not allocated???
-	memset(table[index].key, '\0', 11 * sizeof(char));
-        table[index].count = 0;
-	printf("put: pre-count =%ln\n", table[index].count); 
-	printf("put: pre-key=%s\n", table[index].key);
+	memset((table)[index].key, '\0', 11 * sizeof(char));
+       (table)[index].count = 0;
+	printf("put: pre-count =%lu\n", (table)[index].count); 
+	printf("put: pre-key=%s\n",(table)[index].key);
 	unsigned int l = lenStr(key);
 	printf("key len=%d\n",l);
 	memcpy(table[index].key, key, l+1 );
 	printf("get key=%s\n", table[index].key);
 	table[index].count ++;
-	printf("put: post-count =%ln\n", table[index].count);
+	printf("put: post-count =%lu\n", table[index].count);
 	printf("put: post-key=%s\n", table[index].key);
 //	table[index].lock.unlock();
 	
@@ -96,7 +96,7 @@ __global__ void putTest(void){
         unsigned char* s2 = (unsigned char*) "abababab10";
         unsigned char* s3 = (unsigned char*) "cdababab9";
         unsigned char* s4 = (unsigned char*) "cdababab10";	
-	put(s1, i_table->table, 4);
+//	put(s1, i_table->table, 4);
 	unsigned long index = hash_sdbm(s1, 4);
 	printf("original key = %s, find key = %s, count = %lu\n", s1, i_table->table[index].key, i_table->table[index].count); 	
 
@@ -122,8 +122,8 @@ int main ()
 	Hashtable *i_table; //&((i_table->table)[idx])
 	initTable(4, &i_table); //problem on this reference
 	printf("post-init key: %s\n",(*i_table).table[0].key);
-	printf("post-init count: %ln\n",(*i_table).table[0].count);
-	put(s1, ((*i_table).table), 4);
+	printf("post-init count: %lu\n",(*i_table).table[0].count);
+	put(s1, ((i_table)->table), 4);
 //	put(s2, i_table->table, 4);
 //	put(s1, i_table->table, 4);
 //	put(s4, i_table->table, 4);
