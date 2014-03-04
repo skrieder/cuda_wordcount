@@ -19,7 +19,7 @@ struct Bucket{
 };
 
 struct Hashtable{
-	unsigned long count;
+	unsigned long table_size;
 	Bucket* table; // table has to be of length count
 	//Lock lock[count];
 };
@@ -35,8 +35,8 @@ __device__ __host__ unsigned long hash_sdbm(unsigned char *str, unsigned long mo
         unsigned long hash = 0; int c=0;
         while (c = *str++)
             hash = c + (hash << 6) + (hash << 16) - hash;
-        printf("hash value before mod: %lu, and ", hash );
-        printf("mod: %lu\n", mod );
+//        printf("hash value before mod: %lu, and ", hash );
+//        printf("mod: %lu\n", mod );
         return hash % mod;
 }
 
@@ -46,15 +46,15 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 //	table[index].lock.lock();
 //	memset((table)[index].key, '\0', 11 * sizeof(char));
 //       (table)[index].count = 0;
-	printf("put: pre-count =%lu\n", (table)[index].count); 
-	printf("put: pre-key=%s\n",(table)[index].key);
+//	printf("put: pre-count =%lu\n", (table)[index].count); 
+//	printf("put: pre-key=%s\n",(table)[index].key);
 	unsigned int l = lenStr(key);
-	printf("key len=%d\n",l);
+//	printf("key len=%d\n",l);
 	memcpy(table[index].key, key, l+1 );
-	printf("get key=%s\n", table[index].key);
+//	printf("get key=%s\n", table[index].key);
 	table[index].count ++;
-	printf("put: post-count =%lu\n", table[index].count);
-	printf("put: post-key=%s\n", table[index].key);
+//	printf("put: post-count =%lu\n", table[index].count);
+//	printf("put: post-key=%s\n", table[index].key);
 //	table[index].lock.unlock();
 }
 
@@ -66,18 +66,32 @@ __device__ __host__ unsigned long get(unsigned char* key, Hashtable *hashTable, 
 
 __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
 	*i_table = (Hashtable*)malloc(sizeof(Hashtable));	
-	(*i_table)->count = size;
+	(*i_table)->table_size = size;
 	(*i_table)->table = (Bucket*)malloc(size * sizeof(Bucket));
 	for(unsigned long i=0; i <= size; i++){
 		memset((*i_table)->table[i].key, '\0', 11 * sizeof(char));
 		(*i_table)->table[i].count = 0;
-		printf("init: blank count = %lu\n", (*i_table)->table[i].count);
+//		printf("init: blank count = %lu\n", (*i_table)->table[i].count);
 	}
 }
 
+__device__ __host__ void it_go_head(){
+}
+
+__device__ __host__ Bucket* it_goto_entry(Hashtable *hashTable, unsigned long index){
+	if(index <= (*hashTable).table_size){
+		Bucket* ret = (Bucket*)malloc(sizeof(Bucket*));
+		ret = &(hashTable->table[index]);
+		
+	}
+	else
+		return NULL;
+}
+
+
 void copy_table_to_host(const Hashtable &devTable, Hashtable &hostTable) {	
-	hostTable.count = devTable.count;
-	unsigned long count = devTable.count;
+	hostTable.table_size = devTable.table_size;
+	unsigned long count = devTable.table_size;
 	hostTable.table = (Bucket*) malloc(count * sizeof(Bucket));
 
 	HANDLE_ERROR(cudaMemcpy(hostTable.table, devTable.table, count* sizeof(Bucket), cudaMemcpyDeviceToHost) );
@@ -101,7 +115,6 @@ __global__ void putTest(void){
         unsigned char* s4 = (unsigned char*) "cdababab10";	
 //	put(s1, i_table->table, 4);
 	unsigned long index = hash_sdbm(s1, 4);
-	printf("original key = %s, find key = %s, count = %lu\n", s1, i_table->table[index].key, i_table->table[index].count); 	
 
 }
 
@@ -119,9 +132,9 @@ int main ()
         unsigned char* s2 = (unsigned char*) "abababab10";
         unsigned char* s3 = (unsigned char*) "cdababab9";
         unsigned char* s4 = (unsigned char*) "cdababa8";	
-	printf("Before putTest\n");
+//	printf("Before putTest\n");
 //	putTest <<<1,1>>> ();
-	printf("After putTest\n");
+//	printf("After putTest\n");
 	Hashtable *i_table; //&((i_table->table)[idx])
 	initTable(4, &i_table); //problem on this reference
 	printf("post-init key: %s\n",(*i_table).table[0].key);
@@ -132,13 +145,18 @@ int main ()
 	put(s4, i_table->table, 4);
 	printf("get s1, count= %lu\n",get(s1, i_table, 4));
         unsigned long index = hash_sdbm(s1, 4);
-      //  printf("original key = %s, find key = %s, count = %lu\n", s1, i_table->table[index].key, i_table->table[index].count);
-index = hash_sdbm(s2, 4);
-      //  printf("original key = %s, find key = %s, count = %lu\n", s2, i_table->table[index].key, i_table->table[index].count);
-index = hash_sdbm(s3, 4);
-      //  printf("original key = %s, find key = %s, count = %lu\n", s3, i_table->table[index].key, i_table->table[index].count);
-index = hash_sdbm(s4, 4);
-      //  printf("original key = %s, find key = %s, count = %lu\n", s4, i_table->table[index].key, i_table->table[index].count);
+	
+	Bucket* item = (Bucket*)calloc(1, sizeof(Bucket));
+	item = it_goto_entry(i_table, 5);
+//	printf("iter key: %s\n",item->key);
+ //       printf("inter count: %lu\n",item->count);
+	
+	if(item == NULL)
+                printf("invalid index\n");
+        else{
+		printf("iter key: %s\n",item->key);	
+		printf("inter count: %lu\n",item->count);
+	}
 
 /*
 
