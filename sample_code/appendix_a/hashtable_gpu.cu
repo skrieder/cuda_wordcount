@@ -45,8 +45,7 @@ void iterate(Table table);
 void initialize_table( Table &table, int entries,
                        int elements ) {
     table.count = entries;
-    HANDLE_ERROR( cudaMalloc( (void**)&table.entries,
-                              entries * sizeof(Entry*)) );
+    HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
     HANDLE_ERROR( cudaMemset( table.entries, 0,
                               entries * sizeof(Entry*) ) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool,
@@ -92,6 +91,9 @@ This function runs on the CUDA device. It takes a list of keys and void ** value
 
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
 
+  // maybe we don't have to do this???
+  //  zero_out_values_in_table(table);
+
   // get the thread id for the current cuda thread context
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   // set a stride based on cuda thread info
@@ -109,7 +111,12 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 
 	// TODO - Rather than setting this to the value of a TID you would need to 
 	// get the current value and add 1 for each occurrence of the hash
-	location->value = (void *)(key+1);
+
+	//	location->value = (void *)(key+1);
+
+	temp_int = get(table, key);
+	location->value = temp_int + 1;
+	
 	if(tid==0){
 	  printf("The hashvalue = %d\n", hashValue);
 	  printf("Adding to table\n");
@@ -163,15 +170,25 @@ void verify_table( const Table &dev_table ) {
 }
 
 void iterate(Table table){
-  printf("In iterate table\n");
+  printf("Start iterate table\n");
   Entry *test_location = &(table.pool[0]);
-  printf("After test_location is set\n");
-  printf("key at 0 = %d\n", test_location->key);
-  printf("value at 0 = %d\n", test_location->value);
-  Entry *test_location1 = &(table.pool[1]);
-  printf("After test_location is set\n");
-  printf("key at 1 = %d\n", test_location1->key);
-  printf("value at 1 = %d\n", test_location1->value);
+
+  for(int i=0; i<1024; i++){
+    test_location = &(table.pool[i]);
+    /*
+    printf("[%d]: {", i);
+    printf("key = %d ", test_location->key);
+    printf("value = %d}\n", test_location->value);
+    printf("Size of void* = %d\n", sizeof(void *));
+    printf("Size of unsigned int = %d\n", sizeof(unsigned int));
+    printf("Size of int = %d\n", sizeof(int));
+    printf("Size of long = %d\n", sizeof(long));
+    printf("Size of unsigned long = %d\n", sizeof(unsigned long));
+    */
+    if((test_location->key + 1) != (unsigned long)test_location->value){
+      printf("FALSE!\n");
+    }
+  }
   printf("End iterate table\n");
 }
 
@@ -199,6 +216,14 @@ int main( void ) {
   // filled in by user of this code example
   Table table;
   initialize_table( table, HASH_ENTRIES, ELEMENTS );
+
+  HANDLE_ERROR( cudaMemset( table.values, 0, entries * sizeof(void*) ) );
+
+  // create a host value
+
+  // zero host value
+
+  // copy host value into device value
 
   //  iterate(table);
 
