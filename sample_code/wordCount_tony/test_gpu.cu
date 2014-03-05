@@ -33,8 +33,13 @@ __host__ __device__ void initTable(unsigned long size, Hashtable** i_table);
 //__global__ void parallel_insert_to_table(Hashtable d_master_hashtable, unsigned char **d_array, int num_threads){
 __global__ void parallel_insert_to_table(Hashtable *d_master_hashtable, char *d_word, int num_threads){
 
-  //  Hashtable *test_table;
-  //initTable(4, &test_table);
+  Hashtable *test_table;
+  initTable(4, &test_table);
+
+  printf("HEX: test_table=%x\n", test_table);
+
+  d_master_hashtable = test_table;
+  printf("HEX: d_master_table=%x\n", d_master_hashtable);
 
   // assert in func
   printf("Start GPU function: parallel_insert_to_table\n");
@@ -48,13 +53,13 @@ __global__ void parallel_insert_to_table(Hashtable *d_master_hashtable, char *d_
 
   printf("calling put_nc\n");
   //  put_nc(temp_string, d_master_hashtable.table, 4);
-  put_nc(temp_string, d_master_hashtable->table, 4);
-  put_nc(temp_string, d_master_hashtable->table, 4);
+  put_nc(temp_string, test_table->table, 4);
+  put_nc(temp_string, test_table->table, 4);
   // put_nc(temp_string, d_master_hashtable->table, 4);
   printf("after call to put_nc\n");
 
   printf("Calling get_nc for string %s\n", temp_string);
-  unsigned long temp_int = get_nc(temp_string, d_master_hashtable, 4);
+  unsigned long temp_int = get_nc(temp_string, test_table, 4);
   //  unsigned long temp_int = get_nc(temp_string, &d_master_hashtable, 4);
 
   printf("The temp_int = %lu\n", temp_int);
@@ -70,6 +75,29 @@ __global__ void parallel_insert_to_table(Hashtable *d_master_hashtable, char *d_
 
   // assert end func
   printf("End of parallel_insert_to_table\n");
+}
+
+__host__ int iterate(Hashtable *final_table){
+  int i = 0;
+  FILE *f = fopen("file.txt", "w");
+  if (f == NULL)
+    {
+      printf("Error opening file!\n");
+      exit(1);
+    }
+  long num_bucket = final_table->table_size;
+  Bucket* buckets =  final_table->table;
+  for (i = 0; i < num_bucket; i++)
+    {
+      printf("word: %s ", buckets[i].key);// print key                         
+      printf ("%lu\n",buckets[i].count);// print count                         
+      fprintf(f, "word: %s %lu\n",  buckets[i].key,  buckets[i].count);//write\
+ to file                                                                                         
+   }
+  fclose(f);
+  // buckets[0].key;                                                                     
+  // buckets[0].count;                                                                   
+  return 0;
 }
 
 __host__ __device__ unsigned int lenStr(unsigned char *str){
@@ -287,21 +315,34 @@ int main ()
 	//	Hashtable d_master_hashtable;
 	//initialize_table( d_master_hashtable, 4, 4);
 
-	Hashtable *h_master_hashtable;
+      	Hashtable *d_master_hashtable;
+      	Hashtable *h_master_hashtable;
 	initTable(4, &h_master_hashtable);
 
 	// declare the device hashtable
-	Hashtable *d_master_hashtable;
+	//Hashtable *d_master_hashtable;
 
-	int size_of_hashtable = (sizeof(Hashtable)+ sizeof(Bucket*)*num_elements);
+	int size_of_hashtable = (sizeof(Bucket*)*num_elements);
 
 	// allocate the device hashtable
-	err = cudaMalloc((void **)&d_master_hashtable, size_of_hashtable);
+	/*
+	err = cudaMalloc((void **)&d_master_hashtable, (size_t)sizeof(Hashtable *));
 	if (err != cudaSuccess){
 	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
 	  exit(EXIT_FAILURE);
 	}	
-
+	*/
+	//	printf("After allocate device hashtable\n");
+	/*
+	// allocate the buckets of the hashtable
+	err = cudaMalloc((void **)&d_master_hashtable->table, (size_t)size_of_hashtable);
+	if (err != cudaSuccess){
+	  fprintf(stderr, "Failed to copy the h_array to the d_array(error code %s)!\n", cudaGetErrorString(err));
+	  exit(EXIT_FAILURE);
+	}
+	*/
+	//	printf("After allocate hashtable entry array\n");
+	/*
 	// copy the host table into the device table
 	printf("Before copy host table to d_table\n");
 	err = cudaMemcpy((void **)d_master_hashtable, (void **)h_master_hashtable, (size_t)size_of_hashtable, cudaMemcpyHostToDevice);
@@ -310,7 +351,7 @@ int main ()
 	  exit(EXIT_FAILURE);
 	}	
 	printf("After cudaMemcpy\n");
-
+	*/
 	// hard code the arrays
 	h_array[0] = s1;
 	h_array[1] = s2;
@@ -356,8 +397,13 @@ int main ()
 	cudaDeviceSynchronize();
 
 	// bring back hashtable
+	cudaMemcpy(&h_master_hashtable, &d_master_hashtable, size_of_hashtable, cudaMemcpyDeviceToHost);
+	
+	printf("After copy hashtable back to host.\n");
+
 
 	// iterate hash table
+	iterate(h_master_hashtable);
 
 	// clean memory
 
