@@ -1,3 +1,3 @@
 #! /bin/bash
 
-nvcc -arch=sm_11 appendix_a/hashtable_gpu.cu -o hashtable_gpu
+nvcc -g -arch=sm_20 appendix_a/hashtable_gpu.cu -o hashtable_gpu

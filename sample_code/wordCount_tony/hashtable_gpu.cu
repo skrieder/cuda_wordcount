@@ -64,7 +64,7 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
     HANDLE_ERROR( cudaMemcpy( hostTable.pool, table.pool,
                               ELEMENTS * sizeof( Entry ),
                               cudaMemcpyDeviceToHost ) );
-
+    /*
     for (int i=0; i<table.count; i++) {
         if (hostTable.entries[i] != NULL)
             hostTable.entries[i] =
@@ -77,6 +77,7 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
                 (Entry*)((size_t)hostTable.pool[i].next -
                 (size_t)table.pool + (size_t)hostTable.pool);
     }
+    */
 }
 
 void free_table( Table &table ) {

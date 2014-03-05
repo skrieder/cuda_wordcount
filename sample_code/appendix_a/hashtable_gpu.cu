@@ -40,6 +40,8 @@ __device__ __host__ size_t hash( unsigned int key,
     return key % count;
 }
 
+void iterate(Table table);
+
 void initialize_table( Table &table, int entries,
                        int elements ) {
     table.count = entries;
@@ -77,6 +79,7 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
                 (Entry*)((size_t)hostTable.pool[i].next -
                 (size_t)table.pool + (size_t)hostTable.pool);
     }
+
 }
 
 void free_table( Table &table ) {
@@ -102,10 +105,18 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
       if ((tid % 32) == i) {
 	Entry *location = &(table.pool[tid]);
 	location->key = key;
-        
+
+
 	// TODO - Rather than setting this to the value of a TID you would need to 
 	// get the current value and add 1 for each occurrence of the hash
-	location->value = values[tid];
+	location->value = (void *)(key+1);
+	if(tid==0){
+	  printf("The hashvalue = %d\n", hashValue);
+	  printf("Adding to table\n");
+	  printf("The key adding = %d\n", key);
+	  printf("The key adding from location = %d\n", location->key);
+	  printf("The value adding from location = %d\n", (unsigned int)location->value);
+	}
 	lock[hashValue].lock();
 	location->next = table.entries[hashValue];
 	table.entries[hashValue] = location;
@@ -120,9 +131,14 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 // copy table back to host, verify elements are there
 void verify_table( const Table &dev_table ) {
     Table   table;
-    
+
+    printf("Before copy table to host.\n");
     // move table to host
     copy_table_to_host( dev_table, table );
+    printf("After copy table to host.\n");
+
+    // iterate table
+    iterate(table);
 
     int count = 0;
     for (size_t i=0; i<table.count; i++) {
@@ -146,6 +162,19 @@ void verify_table( const Table &dev_table ) {
     free( table.entries );
 }
 
+void iterate(Table table){
+  printf("In iterate table\n");
+  Entry *test_location = &(table.pool[0]);
+  printf("After test_location is set\n");
+  printf("key at 0 = %d\n", test_location->key);
+  printf("value at 0 = %d\n", test_location->value);
+  Entry *test_location1 = &(table.pool[1]);
+  printf("After test_location is set\n");
+  printf("key at 1 = %d\n", test_location1->key);
+  printf("value at 1 = %d\n", test_location1->value);
+  printf("End iterate table\n");
+}
+
 
 int main( void ) {
     
@@ -160,6 +189,9 @@ int main( void ) {
   HANDLE_ERROR( cudaMalloc( (void**)&dev_keys, SIZE ) );
   HANDLE_ERROR( cudaMalloc( (void**)&dev_values, SIZE ) );
 
+  printf("On the host:\n");
+  printf("The buffer[0] = %d\n", buffer[0]);
+  printf("The buffer[1] = %d\n", buffer[1]);
   // move the input data to the device
   HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
 
@@ -167,6 +199,8 @@ int main( void ) {
   // filled in by user of this code example
   Table table;
   initialize_table( table, HASH_ENTRIES, ELEMENTS );
+
+  //  iterate(table);
 
   // create a lock array for each entry
   Lock    lock[HASH_ENTRIES];
@@ -199,13 +233,17 @@ int main( void ) {
 
   // move table back and verify
   verify_table( table );
+  printf("After verify table\n");
+
 
   // destroy CUDA event
   HANDLE_ERROR( cudaEventDestroy( start ) );
   HANDLE_ERROR( cudaEventDestroy( stop ) );
-  
+
+  printf("Before free table\n");  
   // free memory
   free_table( table );
+  printf("After free table\n");
   HANDLE_ERROR( cudaFree( dev_lock ) );
   HANDLE_ERROR( cudaFree( dev_keys ) );
   HANDLE_ERROR( cudaFree( dev_values ) );
