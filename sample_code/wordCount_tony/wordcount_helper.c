@@ -3,56 +3,6 @@
 #include<string.h>
 #include "wordcount_helper.h"
 
-// char str[100];
-enum {NOT_FOUND=0,FOUND};
-static char *PTR;
-const char *DELIM;
-unsigned char *strTok(unsigned char* string, const char *delim)
-{
-    int j,flag=NOT_FOUND;
-    unsigned char *p;
-    if(string != NULL)
-    {
-        PTR=string;
-        p=string;
-    }
-    else
-    {
-        if(*PTR == '\0')
-            return NULL;
-
-        p=PTR;
-    }
- 
-    while(*PTR != '\0')
-    {
-        DELIM=delim;
-        while(*DELIM != '\0')
-        {
-            if(*PTR == *DELIM)
-            {
-                if(PTR == p)
-                {
-                    p++;
-                    PTR++;
-                }
-                else
-                {
-                    *PTR='\0';
-                    PTR++;
- 
-                    return p;
-                }
-            }
-            else
-            {
-                DELIM++;
-            }
-        }
-        PTR++;
-    }
-    return p;
-}
 
 int fileRead(FILE *fd, size_t size, void* buff){
 	//buff = malloc(size);
@@ -95,7 +45,6 @@ unsigned int tokenizeToArrayGPU(unsigned char* src,unsigned char** strArray ){
            		break;
 		strArray[j] = token;
 		j++;
-	
     }
 	return j;
 

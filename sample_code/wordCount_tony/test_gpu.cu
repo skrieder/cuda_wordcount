@@ -20,7 +20,7 @@ struct Bucket{
 
 struct Hashtable{
 	unsigned long table_size;
-	Bucket* table; // table has to be of length count
+	Bucket** table; // Tony: change from * to **
   //Lock lock[count];
 };
 
@@ -53,8 +53,8 @@ __global__ void parallel_insert_to_table(Hashtable *d_master_hashtable, char *d_
 
   printf("calling put_nc\n");
   //  put_nc(temp_string, d_master_hashtable.table, 4);
-  put_nc(temp_string, test_table->table, 4);
-  put_nc(temp_string, test_table->table, 4);
+  put_nc(temp_string, *(test_table->table), 4); //Tony
+  put_nc(temp_string, *(test_table->table), 4);
   // put_nc(temp_string, d_master_hashtable->table, 4);
   printf("after call to put_nc\n");
 
@@ -86,7 +86,7 @@ __host__ int iterate(Hashtable *final_table){
       exit(1);
     }
   long num_bucket = final_table->table_size;
-  Bucket* buckets =  final_table->table;
+  Bucket* buckets =  *(final_table->table);
   for (i = 0; i < num_bucket; i++)
     {
       printf("word: %s ", buckets[i].key);// print key                         
@@ -189,21 +189,21 @@ __device__ __host__ void put(unsigned char* key, Bucket* table, unsigned long mo
 __device__ __host__ void put_nc(unsigned char* key, Bucket* table, unsigned long mod){
 //      table[index].lock.lock();
 
-  printf("In put_nc\n");
+//  printf("In put_nc\n");
   unsigned long index = hash_sdbm(key, mod);
-  printf("hash is set\n");
+//  printf("hash is set\n");
   unsigned int l = lenStr(key)*sizeof(char);
-  printf("before memcpy in put_nc\n");
+//  printf("before memcpy in put_nc\n");
   
   // print the key from the params
-  printf("key from params %s\n", key);
+//  printf("key from params %s\n", key);
 
   // print the value of size
-  printf("size to copy %d\n", l+1);
+//  printf("size to copy %d\n", l+1);
 
-  printf("Trying to set the key at table index %lu\n", index);
+  printf("Put: Trying to set the key at table index %lu\n", index);
 
-  printf("Which has a current count of %lu\n", table[index].count);
+  printf("Put: Current count before put: %lu\n", table[index].count);
 
   // sometimes this copy fails...
   memcpy(table[index].key, key, l+1 );
@@ -211,10 +211,10 @@ __device__ __host__ void put_nc(unsigned char* key, Bucket* table, unsigned long
   // print the key from the table
   printf("key from table %s\n", table[index].key);
 
-  printf("after memcpy in put_nc\n");
+//  printf("after memcpy in put_nc\n");
   table[index].count++;
 //      table[index].lock.unlock();
-  printf("end of put_nc\n");
+//  printf("end of put_nc\n");
 }
 
 //get without collision handling
@@ -223,19 +223,19 @@ __device__ __host__ unsigned long get_nc(unsigned char* key, Hashtable *hashTabl
   printf("The input key = %s\n", key);
   unsigned long index = hash_sdbm(key, mod);
   //printf("\n\n get count=%lu\n",(hashTable->table[index].count));
-  printf("The key is = %s\n", hashTable->table[index].key);
-  return (hashTable->table[index].count);
+  printf("The key is = %s\n", hashTable->table[index]->key); //Tony
+  return (hashTable->table[index]->count);//Tony
 }
 
 __host__ __device__ void initTable(unsigned long size, Hashtable** i_table){
   printf("Start of initTable\n");
 	*i_table = (Hashtable*)malloc(sizeof(Hashtable));	
 	(*i_table)->table_size = size;
-	(*i_table)->table = (Bucket*)malloc(size * sizeof(Bucket));
+	(*i_table)->table = (Bucket**)malloc(size * sizeof(Bucket));//Tony
 	for(unsigned long i=0; i <= size; i++){
-		memset((*i_table)->table[i].key, '\0', 11 * sizeof(char));
-		(*i_table)->table[i].count = 0;
-		(*i_table)->table[i].next_collision = NULL;
+		memset((*i_table)->table[i]->key, '\0', 11 * sizeof(char));//Tony
+		(*i_table)->table[i]->count = 0;//Tony
+		(*i_table)->table[i]->next_collision = NULL;//Tony
 //		printf("init: blank count = %lu\n", (*i_table)->table[i].count);
 	}
 	printf("End of initTable\n");
@@ -255,7 +255,7 @@ __device__ __host__ Bucket* it_goto_entry(Hashtable *hashTable, unsigned long in
 void copy_table_to_host(const Hashtable &devTable, Hashtable &hostTable) {	
 	hostTable.table_size = devTable.table_size;
 	unsigned long count = devTable.table_size;
-	hostTable.table = (Bucket*) malloc(count * sizeof(Bucket));
+	hostTable.table = (Bucket**) malloc(count * sizeof(Bucket));//Tony
 
 	HANDLE_ERROR(cudaMemcpy(hostTable.table, devTable.table, count* sizeof(Bucket), cudaMemcpyDeviceToHost) );
 }
@@ -294,7 +294,8 @@ int main ()
   //        unsigned long hash_size = 1024*1024;
   //        unsigned long hashValue =0;
   //unsigned char str[] ="Hello World Great Dayss"; // Tokenize this string TODO
-	unsigned long mod = 4; // auto gen this number TODO
+
+	unsigned long mod = 1023; // auto gen this number TODO
 	
         unsigned char* s1 = (unsigned char*) "Hello";
         unsigned char* s2 = (unsigned char*) "World";
@@ -305,7 +306,7 @@ int main ()
 	int num_elements = 4;
 
 	// set the array size
-	int array_size = sizeof(char*)*mod*6;
+	int array_size = sizeof(char*)*mod*6; //Tony: should this be char not char* ? No, tried and not the problem.
 
 	// allocate the host array and table
 	unsigned char** h_array = (unsigned char **)calloc(1, array_size);
@@ -317,7 +318,7 @@ int main ()
 
       	Hashtable *d_master_hashtable;
       	Hashtable *h_master_hashtable;
-	initTable(4, &h_master_hashtable);
+//	initTable(4, &h_master_hashtable);
 
 	// declare the device hashtable
 	//Hashtable *d_master_hashtable;
@@ -353,6 +354,14 @@ int main ()
 	printf("After cudaMemcpy\n");
 	*/
 	// hard code the arrays
+
+
+
+
+
+
+
+/*
 	h_array[0] = s1;
 	h_array[1] = s2;
 	h_array[2] = s3;
@@ -386,41 +395,43 @@ int main ()
 	char *d_word;
 	cudaMalloc((void**)&d_word, (size_t)sizeof(char *)*6);
 	cudaMemcpy(d_word, h_word, (sizeof(char *)*6), cudaMemcpyHostToDevice);
-
+*/
 	// launch GPU kernel
 	int num_threads = 1;
 	//	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_array, num_threads);
-	printf("before gpu call\n");
-	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_word, num_threads);
-	printf("after gpu call\n");
+//	printf("before gpu call\n");
+//	parallel_insert_to_table<<<1,num_threads>>>(d_master_hashtable, d_word, num_threads);
+//	printf("after gpu call\n");
 	// sync device
-	cudaDeviceSynchronize();
+//	cudaDeviceSynchronize();
 
 	// bring back hashtable
-	cudaMemcpy(&h_master_hashtable, &d_master_hashtable, size_of_hashtable, cudaMemcpyDeviceToHost);
+//	cudaMemcpy(&h_master_hashtable, &d_master_hashtable, size_of_hashtable, cudaMemcpyDeviceToHost);
 	
-	printf("After copy hashtable back to host.\n");
+//	printf("After copy hashtable back to host.\n");
 
 
 	// iterate hash table
-	iterate(h_master_hashtable);
+//	iterate(h_master_hashtable);
 
 	// clean memory
 
 	// return
 
 	/* Everything past here is old code to be merged in.*/
-
+	
+	Hashtable* i_table;
+	initTable(4, &i_table);	
 //	printf("Before putTest\n");
 //	putTest <<<1,1>>> ();
 //	printf("After putTest\n");
 //	printf("post-init key: %s\n",(*i_table).table[0].key);
 //	printf("post-init count: %lu\n",(*i_table).table[0].count);
-//	put(s1, ((i_table)->table), mod);
-//	put_nc(s2, i_table->table, mod);
-//	put_nc(s1, i_table->table, mod);
-//	put_nc(s4, i_table->table, mod);
-//	printf("get s1, count= %lu\n",get_nc(s1, i_table, mod));
+	put_nc(s1, (*((i_table)->table)), mod);//Tony
+	put_nc(s2, *(i_table->table), mod);//Tony
+	put_nc(s1, *(i_table->table), mod);//Tony
+	put_nc(s4, *(i_table->table), mod);//Tony
+	printf("=========================      get s1, count= %lu\n",get_nc(s1, i_table, mod));
 
 	// send to GPU
 

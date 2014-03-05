@@ -88,6 +88,21 @@ void free_table( Table &table ) {
 /* global add_to_table 
 This function runs on the CUDA device. It takes a list of keys and void ** values along with a table and an array of locks. All of the threads in the current execution will stride across the array and insert relevant items into the table.*/
 
+__host__ __device__ unsigned long get(Table table, unsigned int key){
+        size_t hashValue = hash(key, table.count);
+	printf("In get: table.count= %lu\n", table.count);
+	printf("key = %d\n", key);
+	printf("hashValue = %lu\n", hashValue);
+	
+	Entry *location2 = &(table.pool[hashValue]);
+//      location->key = key;
+        unsigned long ret = (unsigned long)location2->value;
+
+        printf("In Get: ret = %lu\n", ret);
+	printf("In Get: location->value = %lu\n", (unsigned long) location2->value);
+	return ret;
+}
+
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
 
   // maybe we don't have to do this???
@@ -113,6 +128,9 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 
 	if(tid==0){
 	  printf("Should be 0 == %lu\n", (unsigned long)location->value);
+	printf("add_to_table: key = %d\n", key);
+	unsigned long r = get(table, key);
+	printf("Get: r = %lu\n", r);
 	}
 
 	location->value = (void *)(key+1);

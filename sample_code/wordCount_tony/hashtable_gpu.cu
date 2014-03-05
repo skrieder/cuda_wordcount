@@ -118,6 +118,15 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   }
 }
 
+__host__ __device__ unsigned long get(Table table, unsigned int key){
+	size_t hashValue = hash(key, table.count);
+	Entry *location = &(table.pool[hashValue]);
+//	location->key = key;
+	unsigned long ret = location->value;
+	return ret;
+}
+
+
 // copy table back to host, verify elements are there
 void verify_table( const Table &dev_table ) {
     Table   table;
