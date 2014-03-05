@@ -51,8 +51,13 @@ void initialize_table( Table &table, int entries, int elements ) {
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
 
     printf("Zero out this many bytes = %d\n", elements * sizeof(Entry));
+    printf("Size of Entry = %d\n", sizeof(Entry));
     //HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
-    HANDLE_ERROR( cudaMemset( table.pool, 0, entries * sizeof(Entry) ) );
+    
+    for(int i = 0; i<1024; i++){
+      HANDLE_ERROR( cudaMemset( &(table.pool[i]), 0, sizeof(Entry) ) );
+    }
+    //    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, sizeof(Entry) ) );
 }
 
 void copy_table_to_host( const Table &table, Table &hostTable) {
