@@ -42,14 +42,13 @@ __device__ __host__ size_t hash( unsigned int key,
 
 void iterate(Table table);
 
-void initialize_table( Table &table, int entries,
-                       int elements ) {
+void initialize_table( Table &table, int entries, int elements ) {
     table.count = entries;
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
-    HANDLE_ERROR( cudaMemset( table.entries, 0,
-                              entries * sizeof(Entry*) ) );
-    HANDLE_ERROR( cudaMalloc( (void**)&table.pool,
-                               elements * sizeof(Entry)) );
+    HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
+    HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
+    HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
+
 }
 
 void copy_table_to_host( const Table &table, Table &hostTable) {
@@ -112,17 +111,21 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 	// TODO - Rather than setting this to the value of a TID you would need to 
 	// get the current value and add 1 for each occurrence of the hash
 
-	//	location->value = (void *)(key+1);
+	if(tid==0){
+	  printf("Should be 0 == %lu\n", (unsigned long)location->value);
+	}
 
-	temp_int = get(table, key);
-	location->value = temp_int + 1;
+	location->value = (void *)(key+1);
+
+	//	temp_int = get(table, key);
+	//location->value = temp_int + 1;
 	
 	if(tid==0){
 	  printf("The hashvalue = %d\n", hashValue);
 	  printf("Adding to table\n");
 	  printf("The key adding = %d\n", key);
 	  printf("The key adding from location = %d\n", location->key);
-	  printf("The value adding from location = %d\n", (unsigned int)location->value);
+	  printf("The value adding from location = %lu\n", (unsigned long)location->value);
 	}
 	lock[hashValue].lock();
 	location->next = table.entries[hashValue];
@@ -194,17 +197,20 @@ void iterate(Table table){
 
 
 int main( void ) {
-    
+  printf("Starting main.\n");
   // generates a large array of integers for the input data
   /* TODO - rather than generate a large block of int's you want to read from a text file and build an array of (char *)'s */
 
   unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
   unsigned int *dev_keys;
-  void         **dev_values;
+  void **dev_values;
 
   // allocate memory on the device
   HANDLE_ERROR( cudaMalloc( (void**)&dev_keys, SIZE ) );
   HANDLE_ERROR( cudaMalloc( (void**)&dev_values, SIZE ) );
+  printf("Before memset\n");
+  //  HANDLE_ERROR( cudaMemset( (void *)&dev_values, 0, SIZE) );
+  printf("After memset\n");
 
   printf("On the host:\n");
   printf("The buffer[0] = %d\n", buffer[0]);
@@ -216,8 +222,7 @@ int main( void ) {
   // filled in by user of this code example
   Table table;
   initialize_table( table, HASH_ENTRIES, ELEMENTS );
-
-  HANDLE_ERROR( cudaMemset( table.values, 0, entries * sizeof(void*) ) );
+  printf("Table initialized from host\n");
 
   // create a host value
 
@@ -243,9 +248,12 @@ int main( void ) {
   HANDLE_ERROR( cudaEventCreate( &stop ) );
   HANDLE_ERROR( cudaEventRecord( start, 0 ) );
 
+  printf("Calling GPU func\n");
   // call device function to parallel add to table
   // this launches 60 blocks with 256 threads each, each block is scheduled on a SM without any order guarantees
   add_to_table<<<60,256>>>( dev_keys, dev_values,table, dev_lock );
+  cudaDeviceSynchronize();
+  printf("GPU Call done\n");
 
   // trigger event
   HANDLE_ERROR( cudaEventRecord( stop, 0 ) );
