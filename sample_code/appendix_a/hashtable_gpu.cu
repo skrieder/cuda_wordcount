@@ -40,15 +40,19 @@ __device__ __host__ size_t hash( unsigned int key,
     return key % count;
 }
 
-void iterate(Table table);
+__host__ __device__ void iterate(Table table);
 
 void initialize_table( Table &table, int entries, int elements ) {
     table.count = entries;
+    printf("In init table, entries = %d\n", entries);
+    printf("In init table, elements = %d\n", elements);
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
     HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
-    HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
 
+    printf("Zero out this many bytes = %d\n", elements * sizeof(Entry));
+    //HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
+    HANDLE_ERROR( cudaMemset( table.pool, 0, entries * sizeof(Entry) ) );
 }
 
 void copy_table_to_host( const Table &table, Table &hostTable) {
@@ -94,7 +98,7 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 	printf("key = %d\n", key);
 	printf("hashValue = %lu\n", hashValue);
 	
-	Entry *location2 = &(table.pool[hashValue]);
+	Entry *location2 = &(table.pool[1]);
 //      location->key = key;
         unsigned long ret = (unsigned long)location2->value;
 
@@ -105,11 +109,18 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
 
+  // get the thread id for the current cuda thread context
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+
+  // iterate the table with 1 thread
+  if(tid==0){
+    iterate(table);
+  }
+
   // maybe we don't have to do this???
   //  zero_out_values_in_table(table);
 
-  // get the thread id for the current cuda thread context
-  int tid = threadIdx.x + blockIdx.x * blockDim.x;
   // set a stride based on cuda thread info
   int stride = blockDim.x * gridDim.x;
 
@@ -166,7 +177,7 @@ void verify_table( const Table &dev_table ) {
     printf("After copy table to host.\n");
 
     // iterate table
-    iterate(table);
+    // iterate(table);
 
     int count = 0;
     for (size_t i=0; i<table.count; i++) {
@@ -190,25 +201,25 @@ void verify_table( const Table &dev_table ) {
     free( table.entries );
 }
 
-void iterate(Table table){
+__host__ __device__ void iterate(Table table){
   printf("Start iterate table\n");
   Entry *test_location = &(table.pool[0]);
 
   for(int i=0; i<1024; i++){
     test_location = &(table.pool[i]);
-    /*
+    
     printf("[%d]: {", i);
     printf("key = %d ", test_location->key);
     printf("value = %d}\n", test_location->value);
-    printf("Size of void* = %d\n", sizeof(void *));
-    printf("Size of unsigned int = %d\n", sizeof(unsigned int));
-    printf("Size of int = %d\n", sizeof(int));
-    printf("Size of long = %d\n", sizeof(long));
-    printf("Size of unsigned long = %d\n", sizeof(unsigned long));
-    */
-    if((test_location->key + 1) != (unsigned long)test_location->value){
-      printf("FALSE!\n");
-    }
+    //printf("Size of void* = %d\n", sizeof(void *));
+    //printf("Size of unsigned int = %d\n", sizeof(unsigned int));
+    //printf("Size of int = %d\n", sizeof(int));
+    //printf("Size of long = %d\n", sizeof(long));
+    //printf("Size of unsigned long = %d\n", sizeof(unsigned long));
+    
+    //    if((test_location->key + 1) != (unsigned long)test_location->value){
+    //  printf("FALSE!\n");
+    //}
   }
   printf("End iterate table\n");
 }
