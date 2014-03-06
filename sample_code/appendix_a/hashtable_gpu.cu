@@ -46,14 +46,35 @@ void initialize_table( Table &table, int entries, int elements ) {
     table.count = entries;
     printf("In init table, entries = %d\n", entries);
     printf("In init table, elements = %d\n", elements);
+
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
-    HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
 
-    //    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, sizeof(Entry) ) );
-    HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
+    HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
 
-    //HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
+    /*
+    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, 1 * sizeof(Entry) ) );
+    HANDLE_ERROR( cudaMemset( &(table.pool[31]), 0, 1 * sizeof(Entry) ) );
+    HANDLE_ERROR( cudaMemset( &(table.pool[32]), 0, 1 * sizeof(Entry) ) );
+    HANDLE_ERROR( cudaMemset( &(table.pool[33]), 0, 1 * sizeof(Entry) ) );
+
+    printf("DEBUG POINTERS: 0 = %lu\n", (unsigned long)&(table.pool[0]));
+    printf("DEBUG POINTERS: 1 = %lu\n", (unsigned long)&(table.pool[1]));
+    printf("DEBUG POINTERS: 31 = %lu\n", (unsigned long)&(table.pool[31]));
+    printf("DEBUG POINTERS: 32 = %lu\n", (unsigned long)&(table.pool[32]));
+    printf("DEBUG POINTERS: 33 = %lu\n", (unsigned long)&(table.pool[33]));
+    */
+    // copy back pool[0]
+    
+
+
+    // get Entry *
+
+
+    //    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, sizeof(Entry) ) );
+    //    HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
+
+    
 
     // declare host
     //    const void *temp_zero;
@@ -88,24 +109,27 @@ void initialize_table( Table &table, int entries, int elements ) {
 
 void copy_table_to_host( const Table &table, Table &hostTable) {
     hostTable.count = table.count;
-    hostTable.entries = (Entry**)calloc( table.count,
-                                         sizeof(Entry*) );
-    hostTable.pool = (Entry*)malloc( ELEMENTS *
-                                     sizeof( Entry ) );
+    hostTable.entries = (Entry**)calloc( table.count, sizeof(Entry*) );
+    hostTable.pool = (Entry*)malloc( ELEMENTS * sizeof( Entry ) );
 
-    HANDLE_ERROR( cudaMemcpy( hostTable.entries, table.entries,
-                              table.count * sizeof(Entry*),
-                              cudaMemcpyDeviceToHost ) );
-    HANDLE_ERROR( cudaMemcpy( hostTable.pool, table.pool,
-                              ELEMENTS * sizeof( Entry ),
-                              cudaMemcpyDeviceToHost ) );
+    HANDLE_ERROR( cudaMemcpy( hostTable.entries, table.entries, table.count * sizeof(Entry*), cudaMemcpyDeviceToHost ) );
 
+    HANDLE_ERROR( cudaMemcpy( hostTable.pool, table.pool, ELEMENTS * sizeof( Entry ), cudaMemcpyDeviceToHost ) );
+
+    // 0 over 1014
     for (int i=0; i<table.count; i++) {
-        if (hostTable.entries[i] != NULL)
-            hostTable.entries[i] =
-                (Entry*)((size_t)hostTable.entries[i] -
-                (size_t)table.pool + (size_t)hostTable.pool);
+      if (hostTable.entries[i] != NULL){
+	int x = (size_t)table.pool;
+	int y = (size_t)hostTable.pool;
+      
+	//	printf("[%d]: SIZE OF TABLE.POOL = %d, SIZE OF hostTABLE.pool = %d\n", i, x, y);
+
+      hostTable.entries[i] = 
+	  (Entry*)((size_t)hostTable.entries[i] - (size_t)table.pool + (size_t)hostTable.pool);
     }
+}
+
+    // 0 over 26M
     for (int i=0; i<ELEMENTS; i++) {
         if (hostTable.pool[i].next != NULL)
             hostTable.pool[i].next =
@@ -144,16 +168,10 @@ __device__ void zero_out_values_in_table(Table table){
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (tid == 0){
-    printf("Hello from thread id = %d\n", tid);
-    
-    //    Entry *temp_entry = &(table.pool[35]);
-    //memset ( (void *) temp_entry, 0, 24);
-    
+    Entry *temp_entry;
     for(int j=0; j<count; j++){
-      Entry *temp_entry = &(table.pool[j]);
-      temp_entry->value = (void *)0;
-      temp_entry->key = 0;
-      temp_entry->next = NULL;
+      temp_entry = &(table.pool[j]);
+      memset ( (void *) temp_entry, 0, 24);
     }
     
     printf("ITERATE IN ZERO OUT TABLE\n");
@@ -167,7 +185,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   // iterate the table with 1 thread
   if(tid==0){
-  //  zero_out_values_in_table(table);
+    zero_out_values_in_table(table);
     printf("ITERATE FROM START OF ADD_TO_TABLE:\n");
     iterate(table);
   }
@@ -264,19 +282,9 @@ __host__ __device__ void iterate(Table table){
     printf("[%d]: {", i);
     printf("key = %d ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
-    //printf("Size of void* = %d\n", sizeof(void *));
-    //printf("Size of unsigned int = %d\n", sizeof(unsigned int));
-    //printf("Size of int = %d\n", sizeof(int));
-    //printf("Size of long = %d\n", sizeof(long));
-    //printf("Size of unsigned long = %d\n", sizeof(unsigned long));
-    
-    //    if((test_location->key + 1) != (unsigned long)test_location->value){
-    //  printf("FALSE!\n");
-    //}
   }
   printf("End iterate table\n");
 }
-
 
 int main( void ) {
   printf("Starting main.\n");
