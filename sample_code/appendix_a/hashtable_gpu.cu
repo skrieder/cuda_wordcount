@@ -196,6 +196,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   //  printf("ADD_TO_TABLE:\n");
   //  printf("ELEMENTS = %d\n", ELEMENTS);
   // walk the data and hash and insert
+  int temp_int;
   while (tid < ELEMENTS) {
     unsigned int key = keys[tid];
     size_t hashValue = hash( key, table.count );
@@ -213,10 +214,10 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 	//  printf("Get: r = %lu\n", r);
 	//}
 	
-	location->value = (void *)(key+1);
+	location->value = (void *)(1337);
 	
-	//	temp_int = get(table, key);
-	//location->value = temp_int + 1;
+	//temp_int = get(table, key);
+	//location->value = (void *)(temp_int + 1);
 	/*	
 	if(tid==0){
 	  printf("The hashvalue = %d\n", hashValue);
