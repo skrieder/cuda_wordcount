@@ -49,15 +49,18 @@ void initialize_table( Table &table, int entries, int elements ) {
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
     HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
-
-    printf("Zero out this many bytes = %d\n", elements * sizeof(Entry));
-    printf("Size of Entry = %d\n", sizeof(Entry));
+    HANDLE_ERROR( cudaMemset( table.pool, 0, entries * sizeof(Entry) ) );
+    /*
+    printf("Zero out this many bytes = %lu\n", elements * sizeof(Entry));
+    printf("Size of Entry = %lu\n", sizeof(Entry));
+    printf("Size of Entry* = %lu\n", sizeof(Entry *));
     //HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
     
     for(int i = 0; i<1024; i++){
       HANDLE_ERROR( cudaMemset( &(table.pool[i]), 0, sizeof(Entry) ) );
     }
     //    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, sizeof(Entry) ) );
+    */
 }
 
 void copy_table_to_host( const Table &table, Table &hostTable) {
@@ -112,11 +115,30 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 	return ret;
 }
 
+__device__ void zero_out_values_in_table(Table table){
+  //printf("In zero out table\n");
+  int count = table.count;
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (tid == 0){
+    printf("Hello from thread id = %d\n", tid);
+
+    for(int j=0; j<count; j++){
+      Entry *temp_entry = &(table.pool[j]);
+      temp_entry->value = (void *)0;
+      temp_entry->key = 0;
+    }
+  }
+  // printf("The size of the table is = %d\n", count);
+  //printf("End zero out table\n");
+}
+
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
 
   // get the thread id for the current cuda thread context
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
+  zero_out_values_in_table(table);
 
   // iterate the table with 1 thread
   if(tid==0){
@@ -215,7 +237,7 @@ __host__ __device__ void iterate(Table table){
     
     printf("[%d]: {", i);
     printf("key = %d ", test_location->key);
-    printf("value = %d}\n", test_location->value);
+    printf("value = %lu}\n", (unsigned long)test_location->value);
     //printf("Size of void* = %d\n", sizeof(void *));
     //printf("Size of unsigned int = %d\n", sizeof(unsigned int));
     //printf("Size of int = %d\n", sizeof(int));
