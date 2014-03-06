@@ -49,7 +49,27 @@ void initialize_table( Table &table, int entries, int elements ) {
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
     HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
-    //HANDLE_ERROR( cudaMemset( table.pool, 0, entries * sizeof(Entry) ) );
+
+    //    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, sizeof(Entry) ) );
+    HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
+
+    //HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
+
+    // declare host
+    //    const void *temp_zero;
+    
+    // alloc host
+    //temp_zero = calloc(1,(elements * sizeof(Entry)));
+
+    // copy into device
+    //   cudaMemcpy((void *)table.pool, temp_zero, (elements * sizeof(Entry)), cudaMemcpyHostToDevice);
+
+    //    cudaMalloc( (void**)&table.pool, elements * sizeof(Entry));
+
+
+
+
+
     //    HANDLE_ERROR( cudaMemset( table.pool+1024, 0, entries * sizeof(Entry) ) );
     
 
@@ -143,52 +163,43 @@ __device__ void zero_out_values_in_table(Table table){
 }
 
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
-
   // get the thread id for the current cuda thread context
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-
   // iterate the table with 1 thread
   if(tid==0){
-    zero_out_values_in_table(table);
-    printf("ITERATE FROM ADD_TO_TABLE:\n");
+  //  zero_out_values_in_table(table);
+    printf("ITERATE FROM START OF ADD_TO_TABLE:\n");
     iterate(table);
   }
-
   // maybe we don't have to do this???
   // zero_out_values_in_table(table);
-
   // set a stride based on cuda thread info
   int stride = blockDim.x * gridDim.x;
-
   //  printf("ADD_TO_TABLE:\n");
   //  printf("ELEMENTS = %d\n", ELEMENTS);
-
   // walk the data and hash and insert
   while (tid < ELEMENTS) {
-    //    printf("TID: %d\n", tid);
     unsigned int key = keys[tid];
     size_t hashValue = hash( key, table.count );
     for (int i=0; i<32; i++) {
       if ((tid % 32) == i) {
 	Entry *location = &(table.pool[tid]);
 	location->key = key;
-	
 	// TODO - Rather than setting this to the value of a TID you would need to 
 	// get the current value and add 1 for each occurrence of the hash
 	
-	if(tid==0){
-	  printf("Should be 0 == %lu\n", (unsigned long)location->value);
-	  printf("add_to_table: key = %d\n", key);
-	  unsigned long r = get(table, key);
-	  printf("Get: r = %lu\n", r);
-	}
+	//	if(tid==0){
+	//  printf("Should be 0 == %lu\n", (unsigned long)location->value);
+	//  printf("add_to_table: key = %d\n", key);
+	//  unsigned long r = get(table, key);
+	//  printf("Get: r = %lu\n", r);
+	//}
 	
 	location->value = (void *)(key+1);
 	
 	//	temp_int = get(table, key);
 	//location->value = temp_int + 1;
-	
+	/*	
 	if(tid==0){
 	  printf("The hashvalue = %d\n", hashValue);
 	  printf("Adding to table\n");
@@ -196,6 +207,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 	  printf("The key adding from location = %d\n", location->key);
 	  printf("The value adding from location = %lu\n", (unsigned long)location->value);
 	}
+	*/
 	lock[hashValue].lock();
 	location->next = table.entries[hashValue];
 	table.entries[hashValue] = location;
