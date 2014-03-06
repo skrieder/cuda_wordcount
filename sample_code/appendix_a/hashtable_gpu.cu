@@ -49,7 +49,10 @@ void initialize_table( Table &table, int entries, int elements ) {
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
     HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
-    HANDLE_ERROR( cudaMemset( table.pool, 0, entries * sizeof(Entry) ) );
+    //HANDLE_ERROR( cudaMemset( table.pool, 0, entries * sizeof(Entry) ) );
+    //    HANDLE_ERROR( cudaMemset( table.pool+1024, 0, entries * sizeof(Entry) ) );
+    
+
     /*
     printf("Zero out this many bytes = %lu\n", elements * sizeof(Entry));
     printf("Size of Entry = %lu\n", sizeof(Entry));
@@ -116,21 +119,27 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 }
 
 __device__ void zero_out_values_in_table(Table table){
-  //printf("In zero out table\n");
+  printf("In zero out table\n");
   int count = table.count;
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (tid == 0){
     printf("Hello from thread id = %d\n", tid);
-
+    
+    //    Entry *temp_entry = &(table.pool[35]);
+    //memset ( (void *) temp_entry, 0, 24);
+    
     for(int j=0; j<count; j++){
       Entry *temp_entry = &(table.pool[j]);
       temp_entry->value = (void *)0;
       temp_entry->key = 0;
+      temp_entry->next = NULL;
     }
+    
+    printf("ITERATE IN ZERO OUT TABLE\n");
+    iterate(table);
+    printf("End zero out table\n");
   }
-  // printf("The size of the table is = %d\n", count);
-  //printf("End zero out table\n");
 }
 
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
@@ -138,41 +147,45 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   // get the thread id for the current cuda thread context
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
-  zero_out_values_in_table(table);
 
   // iterate the table with 1 thread
   if(tid==0){
+    zero_out_values_in_table(table);
+    printf("ITERATE FROM ADD_TO_TABLE:\n");
     iterate(table);
   }
 
   // maybe we don't have to do this???
-  //  zero_out_values_in_table(table);
+  // zero_out_values_in_table(table);
 
   // set a stride based on cuda thread info
   int stride = blockDim.x * gridDim.x;
 
+  //  printf("ADD_TO_TABLE:\n");
+  //  printf("ELEMENTS = %d\n", ELEMENTS);
+
   // walk the data and hash and insert
   while (tid < ELEMENTS) {
+    //    printf("TID: %d\n", tid);
     unsigned int key = keys[tid];
     size_t hashValue = hash( key, table.count );
     for (int i=0; i<32; i++) {
       if ((tid % 32) == i) {
 	Entry *location = &(table.pool[tid]);
 	location->key = key;
-
-
+	
 	// TODO - Rather than setting this to the value of a TID you would need to 
 	// get the current value and add 1 for each occurrence of the hash
-
+	
 	if(tid==0){
 	  printf("Should be 0 == %lu\n", (unsigned long)location->value);
-	printf("add_to_table: key = %d\n", key);
-	unsigned long r = get(table, key);
-	printf("Get: r = %lu\n", r);
+	  printf("add_to_table: key = %d\n", key);
+	  unsigned long r = get(table, key);
+	  printf("Get: r = %lu\n", r);
 	}
-
+	
 	location->value = (void *)(key+1);
-
+	
 	//	temp_int = get(table, key);
 	//location->value = temp_int + 1;
 	
@@ -192,6 +205,8 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
     // thread id is increased by the size of the stride to get the next new chunk of data and avoid overwriting anything that is complete
     tid += stride;
   }
+  //  printf("ITERATE END OF ADD_TO_TABLE\n");
+  //  iterate(table);
 }
 
 // copy table back to host, verify elements are there
@@ -204,7 +219,8 @@ void verify_table( const Table &dev_table ) {
     printf("After copy table to host.\n");
 
     // iterate table
-    // iterate(table);
+    printf("ITERATE FROM VERIFY:\n");
+    iterate(table);
 
     int count = 0;
     for (size_t i=0; i<table.count; i++) {
@@ -212,9 +228,7 @@ void verify_table( const Table &dev_table ) {
         while (current != NULL) {
             ++count;
             if (hash( current->key, table.count ) != i)
-                printf( "%d hashed to %ld, but was located at %ld\n",
-                        current->key,
-                        hash(current->key, table.count), i );
+	      printf( "%d hashed to %ld, but was located at %ld\n", current->key, hash(current->key, table.count), i );
             current = current->next;
         }
     }
@@ -230,7 +244,7 @@ void verify_table( const Table &dev_table ) {
 
 __host__ __device__ void iterate(Table table){
   printf("Start iterate table\n");
-  Entry *test_location = &(table.pool[0]);
+  Entry *test_location;
 
   for(int i=0; i<1024; i++){
     test_location = &(table.pool[i]);
@@ -285,7 +299,7 @@ int main( void ) {
   // zero host value
 
   // copy host value into device value
-
+  //  printf("ITERATE IN MAIN AFTER INIT:\n");
   //  iterate(table);
 
   // create a lock array for each entry
@@ -307,7 +321,7 @@ int main( void ) {
   printf("Calling GPU func\n");
   // call device function to parallel add to table
   // this launches 60 blocks with 256 threads each, each block is scheduled on a SM without any order guarantees
-  add_to_table<<<60,256>>>( dev_keys, dev_values,table, dev_lock );
+  add_to_table<<<60,256>>>( dev_keys, dev_values, table, dev_lock );
   cudaDeviceSynchronize();
   printf("GPU Call done\n");
 
@@ -323,7 +337,6 @@ int main( void ) {
   // move table back and verify
   verify_table( table );
   printf("After verify table\n");
-
 
   // destroy CUDA event
   HANDLE_ERROR( cudaEventDestroy( start ) );
