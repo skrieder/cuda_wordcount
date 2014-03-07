@@ -153,11 +153,11 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 //	printf("key = %d\n", key);
 //	printf("hashValue = %lu\n", hashValue);
 	
-//	Entry *location2 = &(table.pool[hashValue]);
+	Entry *location2 = &(table.pool[hashValue]);
 //      location->key = key;
-        unsigned long ret = 0;//(unsigned long)location2->value;
+        unsigned long ret = (unsigned long)location2->value;
 
-        printf("In Get: ret = %lu\n", ret);
+//        printf("In Get: ret = %lu\n", ret);
 //	printf("In Get: location->value = %lu\n", (unsigned long) location2->value);
 	return ret;
 }
@@ -211,7 +211,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
     }
     for (int i=0; i<32; i++) {
       if ((tid % 32) == i) {
-	Entry *location = &(table.pool[hashValue]);
+	Entry *location = &(table.pool[tid]);
 	//	Entry *location = &(table.pool[tid]);
 	location->key = key;
 	// TODO - Rather than setting this to the value of a TID you would need to 
