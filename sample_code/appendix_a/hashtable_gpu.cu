@@ -149,16 +149,16 @@ This function runs on the CUDA device. It takes a list of keys and void ** value
 
 __host__ __device__ unsigned long get(Table table, unsigned int key){
         size_t hashValue = hash(key, table.count);
-	printf("In get: table.count= %lu\n", table.count);
-	printf("key = %d\n", key);
-	printf("hashValue = %lu\n", hashValue);
+//	printf("In get: table.count= %lu\n", table.count);
+//	printf("key = %d\n", key);
+//	printf("hashValue = %lu\n", hashValue);
 	
-	Entry *location2 = &(table.pool[1]);
+//	Entry *location2 = &(table.pool[hashValue]);
 //      location->key = key;
-        unsigned long ret = (unsigned long)location2->value;
+        unsigned long ret = 0;//(unsigned long)location2->value;
 
         printf("In Get: ret = %lu\n", ret);
-	printf("In Get: location->value = %lu\n", (unsigned long) location2->value);
+//	printf("In Get: location->value = %lu\n", (unsigned long) location2->value);
 	return ret;
 }
 
@@ -191,9 +191,9 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   if(tid==0){
     printf("TABLE COUNT = %lu\n", table.count);
     zero_out_values_in_table(table);
-    printf("ITERATE FROM START OF ADD_TO_TABLE:\n");
-    iterate(table);
-    printf("AFTER ITERATE FROM START OF ADD_TO_TABLE:\n");
+  //  printf("ITERATE FROM START OF ADD_TO_TABLE:\n");
+//    iterate(table);
+//    printf("AFTER ITERATE FROM START OF ADD_TO_TABLE:\n");
   }
   // maybe we don't have to do this???
   // zero_out_values_in_table(table);
@@ -211,7 +211,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
     }
     for (int i=0; i<32; i++) {
       if ((tid % 32) == i) {
-	Entry *location = &(table.pool[tid]);
+	Entry *location = &(table.pool[hashValue]);
 	//	Entry *location = &(table.pool[tid]);
 	location->key = key;
 	// TODO - Rather than setting this to the value of a TID you would need to 
@@ -224,10 +224,10 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 	//  printf("Get: r = %lu\n", r);
 	//}
 	
-	location->value = (void *)(9999);
-	
-	//temp_int = get(table, key);
-	//location->value = (void *)(temp_int + 1);
+//	location->value = (void *)(8111);
+//lock[hashValue].lock();	
+	temp_int = get(table, key);
+	location->value = (void *)(temp_int + 1);
 	/*	
 	if(tid==0){
 	  printf("The hashvalue = %d\n", hashValue);
