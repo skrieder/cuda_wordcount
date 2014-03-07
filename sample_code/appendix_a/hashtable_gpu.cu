@@ -35,20 +35,20 @@ struct Table {
 };
 
 // TODO - This function needs to be modified to generate a hash based on a strong input
-__device__ __host__ size_t hash( unsigned int key,
-                                 size_t count ) {
-    return key % count;
+__device__ __host__ size_t hash( unsigned int key, size_t count ) {
+  return key % count;
 }
 
 __host__ __device__ void iterate(Table table);
+__host__ __device__ void new_iterate(Table table);
 
 void initialize_table( Table &table, int entries, int elements ) {
     table.count = entries;
     printf("In init table, entries = %d\n", entries);
     printf("In init table, elements = %d\n", elements);
 
-    HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
+    HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
 
     HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
 
@@ -168,12 +168,14 @@ __device__ void zero_out_values_in_table(Table table){
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (tid == 0){
-    Entry *temp_entry;
-    for(int j=0; j<count; j++){
-      temp_entry = &(table.pool[j]);
-      memset ( (void *) temp_entry, 0, 24);
-    }
+    //    Entry *temp_entry = table.entries[0];
+    Entry *pool_entry = table.pool;
+    memset ( (void *) pool_entry, 0, 1024*sizeof(Entry));
     
+    //    for(int j=0; j<count; j++){
+    //  temp_entry = &(table.pool[j]);
+    //  memset ( (void *) temp_entry, 0, 24);
+    //}
     printf("ITERATE IN ZERO OUT TABLE\n");
     iterate(table);
     printf("End zero out table\n");
@@ -181,13 +183,17 @@ __device__ void zero_out_values_in_table(Table table){
 }
 
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
+  //  printf("START: ADD TO TABLE\n");
   // get the thread id for the current cuda thread context
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   // iterate the table with 1 thread
+  
   if(tid==0){
+    printf("TABLE COUNT = %lu\n", table.count);
     zero_out_values_in_table(table);
     printf("ITERATE FROM START OF ADD_TO_TABLE:\n");
     iterate(table);
+    printf("AFTER ITERATE FROM START OF ADD_TO_TABLE:\n");
   }
   // maybe we don't have to do this???
   // zero_out_values_in_table(table);
@@ -200,9 +206,13 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   while (tid < ELEMENTS) {
     unsigned int key = keys[tid];
     size_t hashValue = hash( key, table.count );
+    if (tid ==0){
+      printf("HASH VALUE = %lu\n", hashValue);
+    }
     for (int i=0; i<32; i++) {
       if ((tid % 32) == i) {
 	Entry *location = &(table.pool[tid]);
+	//	Entry *location = &(table.pool[tid]);
 	location->key = key;
 	// TODO - Rather than setting this to the value of a TID you would need to 
 	// get the current value and add 1 for each occurrence of the hash
@@ -214,7 +224,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 	//  printf("Get: r = %lu\n", r);
 	//}
 	
-	location->value = (void *)(1337);
+	//       	location->value = (void *)(9999);
 	
 	//temp_int = get(table, key);
 	//location->value = (void *)(temp_int + 1);
@@ -236,8 +246,10 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
     // thread id is increased by the size of the stride to get the next new chunk of data and avoid overwriting anything that is complete
     tid += stride;
   }
+  //  if(tid ==0){
   //  printf("ITERATE END OF ADD_TO_TABLE\n");
   //  iterate(table);
+  //}
 }
 
 // copy table back to host, verify elements are there
@@ -252,7 +264,8 @@ void verify_table( const Table &dev_table ) {
     // iterate table
     printf("ITERATE FROM VERIFY:\n");
     iterate(table);
-
+    printf("END ITERATE FROM VERIFY:\n");
+    /*
     int count = 0;
     for (size_t i=0; i<table.count; i++) {
         Entry   *current = table.entries[i];
@@ -268,22 +281,39 @@ void verify_table( const Table &dev_table ) {
                 count, ELEMENTS );
     else
         printf( "All %d elements found in hash table.\n", count );
-
+    */
     free( table.pool );
     free( table.entries );
+    printf("END VERIFY TABLE\n");
 }
 
 __host__ __device__ void iterate(Table table){
   printf("Start iterate table\n");
   Entry *test_location;
-
-  for(int i=0; i<1024; i++){
+ 
+  for(int i=0; i<HASH_ENTRIES; i++){
     test_location = &(table.pool[i]);
-    
     printf("[%d]: {", i);
     printf("key = %d ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
   }
+  printf("End iterate table\n");
+}
+
+__host__ __device__ void new_iterate(Table table){
+  printf("Start iterate table\n");
+  Entry *test_location = table.entries[0];
+  printf("key = %d ,", test_location->key);
+  printf("value = %lu}\n", (unsigned long)test_location->value);
+
+  /* 
+  for(int i=0; i<HASH_ENTRIES+1; i++){
+    test_location = &(table.pool[i]);
+    printf("[%d]: {", i);
+    printf("key = %d ", test_location->key);
+    printf("value = %lu}\n", (unsigned long)test_location->value);
+  }
+  */
   printf("End iterate table\n");
 }
 
