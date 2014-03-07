@@ -224,7 +224,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 	//  printf("Get: r = %lu\n", r);
 	//}
 	
-	//       	location->value = (void *)(9999);
+	location->value = (void *)(9999);
 	
 	//temp_int = get(table, key);
 	//location->value = (void *)(temp_int + 1);
