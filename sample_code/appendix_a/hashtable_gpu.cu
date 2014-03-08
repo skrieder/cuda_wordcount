@@ -40,6 +40,8 @@ __device__ __host__ size_t hash( unsigned int key, size_t count ) {
 }
 
 __host__ __device__ void iterate(Table table);
+__device__ void put(Table table, unsigned int key, void* value, Lock lock);
+
 __host__ __device__ void new_iterate(Table table);
 
 void initialize_table( Table &table, int entries, int elements ) {
@@ -47,64 +49,12 @@ void initialize_table( Table &table, int entries, int elements ) {
     printf("In init table, entries = %d\n", entries);
     printf("In init table, elements = %d\n", elements);
 
+    // cuda malloc
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
 
+    // memset
     HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
-
-    /*
-    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, 1 * sizeof(Entry) ) );
-    HANDLE_ERROR( cudaMemset( &(table.pool[31]), 0, 1 * sizeof(Entry) ) );
-    HANDLE_ERROR( cudaMemset( &(table.pool[32]), 0, 1 * sizeof(Entry) ) );
-    HANDLE_ERROR( cudaMemset( &(table.pool[33]), 0, 1 * sizeof(Entry) ) );
-
-    printf("DEBUG POINTERS: 0 = %lu\n", (unsigned long)&(table.pool[0]));
-    printf("DEBUG POINTERS: 1 = %lu\n", (unsigned long)&(table.pool[1]));
-    printf("DEBUG POINTERS: 31 = %lu\n", (unsigned long)&(table.pool[31]));
-    printf("DEBUG POINTERS: 32 = %lu\n", (unsigned long)&(table.pool[32]));
-    printf("DEBUG POINTERS: 33 = %lu\n", (unsigned long)&(table.pool[33]));
-    */
-    // copy back pool[0]
-    
-
-
-    // get Entry *
-
-
-    //    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, sizeof(Entry) ) );
-    //    HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
-
-    
-
-    // declare host
-    //    const void *temp_zero;
-    
-    // alloc host
-    //temp_zero = calloc(1,(elements * sizeof(Entry)));
-
-    // copy into device
-    //   cudaMemcpy((void *)table.pool, temp_zero, (elements * sizeof(Entry)), cudaMemcpyHostToDevice);
-
-    //    cudaMalloc( (void**)&table.pool, elements * sizeof(Entry));
-
-
-
-
-
-    //    HANDLE_ERROR( cudaMemset( table.pool+1024, 0, entries * sizeof(Entry) ) );
-    
-
-    /*
-    printf("Zero out this many bytes = %lu\n", elements * sizeof(Entry));
-    printf("Size of Entry = %lu\n", sizeof(Entry));
-    printf("Size of Entry* = %lu\n", sizeof(Entry *));
-    //HANDLE_ERROR( cudaMemset( table.pool, 0, elements * sizeof(Entry) ) );
-    
-    for(int i = 0; i<1024; i++){
-      HANDLE_ERROR( cudaMemset( &(table.pool[i]), 0, sizeof(Entry) ) );
-    }
-    //    HANDLE_ERROR( cudaMemset( &(table.pool[0]), 0, sizeof(Entry) ) );
-    */
 }
 
 void copy_table_to_host( const Table &table, Table &hostTable) {
@@ -224,7 +174,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
 	//  printf("Get: r = %lu\n", r);
 	//}
 	
-//	location->value = (void *)(8111);
+	//	location->value = (void *)(8111);
 //lock[hashValue].lock();	
 	temp_int = get(table, key);
 	location->value = (void *)(temp_int + 1);
