@@ -40,9 +40,32 @@ __device__ __host__ size_t hash( unsigned int key, size_t count ) {
 }
 
 __host__ __device__ void iterate(Table table);
-__device__ void put(Table table, unsigned int key, void* value, Lock lock);
+__device__ void put(Table table, unsigned int key, Lock *lock, int tid);
+__host__ __device__ unsigned long get(Table table, unsigned int key);
 
 __host__ __device__ void new_iterate(Table table);
+
+
+__device__ void put(Table table, unsigned int key, Lock *lock, int tid){
+  size_t hashValue = hash( key, table.count );
+  if (tid ==0){
+    printf("HASH VALUE = %lu\n", hashValue);
+  }
+  for (int i=0; i<32; i++) {
+    if ((tid % 32) == i) {
+      Entry *location = &(table.pool[tid]);
+      int temp_int;
+
+      location->key = key;
+      temp_int = get(table, key);
+      location->value = (void *)(temp_int + 1);
+      lock[hashValue].lock();
+      location->next = table.entries[hashValue];
+      table.entries[hashValue] = location;
+      lock[hashValue].unlock();
+    }
+  }
+}
 
 void initialize_table( Table &table, int entries, int elements ) {
     table.count = entries;
@@ -133,73 +156,22 @@ __device__ void zero_out_values_in_table(Table table){
 }
 
 __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lock *lock ) {
-  //  printf("START: ADD TO TABLE\n");
-  // get the thread id for the current cuda thread context
+  // get the thread id
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
-  // iterate the table with 1 thread
+  int stride = blockDim.x * gridDim.x;
   
+  unsigned int key = keys[tid];
+
   if(tid==0){
     printf("TABLE COUNT = %lu\n", table.count);
     zero_out_values_in_table(table);
-  //  printf("ITERATE FROM START OF ADD_TO_TABLE:\n");
-//    iterate(table);
-//    printf("AFTER ITERATE FROM START OF ADD_TO_TABLE:\n");
   }
-  // maybe we don't have to do this???
-  // zero_out_values_in_table(table);
-  // set a stride based on cuda thread info
-  int stride = blockDim.x * gridDim.x;
-  //  printf("ADD_TO_TABLE:\n");
-  //  printf("ELEMENTS = %d\n", ELEMENTS);
-  // walk the data and hash and insert
-  int temp_int;
+
+
   while (tid < ELEMENTS) {
-    unsigned int key = keys[tid];
-    size_t hashValue = hash( key, table.count );
-    if (tid ==0){
-      printf("HASH VALUE = %lu\n", hashValue);
-    }
-    for (int i=0; i<32; i++) {
-      if ((tid % 32) == i) {
-	Entry *location = &(table.pool[tid]);
-	//	Entry *location = &(table.pool[tid]);
-	location->key = key;
-	// TODO - Rather than setting this to the value of a TID you would need to 
-	// get the current value and add 1 for each occurrence of the hash
-	
-	//	if(tid==0){
-	//  printf("Should be 0 == %lu\n", (unsigned long)location->value);
-	//  printf("add_to_table: key = %d\n", key);
-	//  unsigned long r = get(table, key);
-	//  printf("Get: r = %lu\n", r);
-	//}
-	
-	//	location->value = (void *)(8111);
-//lock[hashValue].lock();	
-	temp_int = get(table, key);
-	location->value = (void *)(temp_int + 1);
-	/*	
-	if(tid==0){
-	  printf("The hashvalue = %d\n", hashValue);
-	  printf("Adding to table\n");
-	  printf("The key adding = %d\n", key);
-	  printf("The key adding from location = %d\n", location->key);
-	  printf("The value adding from location = %lu\n", (unsigned long)location->value);
-	}
-	*/
-	lock[hashValue].lock();
-	location->next = table.entries[hashValue];
-	table.entries[hashValue] = location;
-	lock[hashValue].unlock();
-      }
-    }
-    // thread id is increased by the size of the stride to get the next new chunk of data and avoid overwriting anything that is complete
+    put(table, key, lock, tid);
     tid += stride;
   }
-  //  if(tid ==0){
-  //  printf("ITERATE END OF ADD_TO_TABLE\n");
-  //  iterate(table);
-  //}
 }
 
 // copy table back to host, verify elements are there
