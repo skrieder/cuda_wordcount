@@ -300,7 +300,7 @@ int main( void ) {
   // generates a large array of integers for the input data
   /* TODO - rather than generate a large block of int's you want to read from a text file and build an array of (char *)'s */
 
-  unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
+  unsigned char *buffer = (unsigned char*)big_random_block( SIZE );
 //  unsigned int *dev_keys;
 
   unsigned char** dev_keys;
@@ -360,21 +360,21 @@ int main( void ) {
   printf("GPU Call done\n");
 
   // trigger event
-  HANDLE_ERROR( cudaEventRecord( stop, 0 ) );
-  HANDLE_ERROR( cudaEventSynchronize( stop ) );
+//  HANDLE_ERROR( cudaEventRecord( stop, 0 ) );
+//  HANDLE_ERROR( cudaEventSynchronize( stop ) );
   
   // print the timer
-  float   elapsedTime;
-  HANDLE_ERROR( cudaEventElapsedTime( &elapsedTime, start, stop ) );
-  printf( "Time to hash:  %3.1f ms\n", elapsedTime );
+//  float   elapsedTime;
+//  HANDLE_ERROR( cudaEventElapsedTime( &elapsedTime, start, stop ) );
+//  printf( "Time to hash:  %3.1f ms\n", elapsedTime );
 
   // move table back and verify
   verify_table( table );
   printf("After verify table\n");
 
   // destroy CUDA event
-  HANDLE_ERROR( cudaEventDestroy( start ) );
-  HANDLE_ERROR( cudaEventDestroy( stop ) );
+//  HANDLE_ERROR( cudaEventDestroy( start ) );
+//  HANDLE_ERROR( cudaEventDestroy( stop ) );
 
   printf("Before free table\n");  
   // free memory
