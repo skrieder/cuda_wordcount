@@ -34,6 +34,18 @@ struct Table {
     Entry   *pool;
 };
 
+void rand_str(unsigned char *dest, size_t length) {
+    char charset[] = "0123456789"
+                     "abcdefghijklmnopqrstuvwxyz"
+                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    while (length-- > 0) {
+        size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
+        *dest++ = charset[index];
+    }
+    *dest = '\0';
+}
+
 __host__ __device__ unsigned long strHash(unsigned char *str, unsigned long mod);
 // TODO - This function needs to be modified to generate a hash based on a strong input
 __device__ __host__ size_t hash( unsigned int key, size_t count ) {
