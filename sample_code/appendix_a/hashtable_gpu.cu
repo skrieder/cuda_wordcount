@@ -25,7 +25,7 @@
 struct Entry {
     unsigned int    key;
     void            *value;
-    Entry           *next;
+  //    Entry           *next;
 };
 
 struct Table {
@@ -60,7 +60,7 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
       temp_int = get(table, key);
       location->value = (void *)(temp_int + 1);
       lock[hashValue].lock();
-      location->next = table.entries[hashValue];
+      //      location->next = table.entries[hashValue];
       table.entries[hashValue] = location;
       lock[hashValue].unlock();
     }
@@ -103,12 +103,14 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
 }
 
     // 0 over 26M
+    /*
     for (int i=0; i<ELEMENTS; i++) {
         if (hostTable.pool[i].next != NULL)
             hostTable.pool[i].next =
                 (Entry*)((size_t)hostTable.pool[i].next -
                 (size_t)table.pool + (size_t)hostTable.pool);
     }
+    */
 
 }
 
