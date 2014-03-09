@@ -53,7 +53,7 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
   }
   for (int i=0; i<32; i++) {
     if ((tid % 32) == i) {
-      Entry *location = &(table.pool[tid]);
+      Entry *location = &(table.pool[hashValue]);
       int temp_int;
 
       location->key = key;
@@ -243,6 +243,7 @@ __host__ __device__ void new_iterate(Table table){
 
 int main( void ) {
   printf("Starting main.\n");
+  printf("Elements = %lu\n", ELEMENTS);
   // generates a large array of integers for the input data
   /* TODO - rather than generate a large block of int's you want to read from a text file and build an array of (char *)'s */
 

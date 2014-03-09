@@ -47,7 +47,8 @@ void* big_random_block( int size ) {
     unsigned char *data = (unsigned char*)malloc( size );
     HANDLE_NULL( data );
     for (int i=0; i<size; i++)
-        data[i] = rand();
+      data[i] = rand();
+    //data[i] = 1;
 
     return data;
 }
