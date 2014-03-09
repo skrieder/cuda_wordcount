@@ -165,6 +165,9 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   unsigned int key = keys[tid];
 
   if(tid==0){
+    
+    printf("KEY ====== %d\n", key);
+    printf("unsigned int %lu\n", sizeof(unsigned int));
     printf("TABLE COUNT = %lu\n", table.count);
     zero_out_values_in_table(table);
   }

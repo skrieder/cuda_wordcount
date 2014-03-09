@@ -18,14 +18,14 @@
 #include "lock.h"
 
 #define SIZE    (100*1024*1024)
-#define ELEMENTS    (SIZE / sizeof(unsigned int))
+#define WORD_SIZE 4
+#define ELEMENTS    (SIZE / (sizeof(char)*WORD_SIZE))
 #define HASH_ENTRIES     1024
 
-
 struct Entry {
-    unsigned char key[10];
-    void            *value;
-    Entry           *next;
+  unsigned char key[WORD_SIZE];
+  void            *value;
+  Entry           *next;
 };
 
 struct Table {
@@ -55,7 +55,7 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
  
   for (int i=0; i<32; i++) {
     if ((tid % 32) == i) {
-      Entry *location = &(table.pool[tid]);
+      Entry *location = &(table.pool[hashValue]);
       int temp_int;
 
       location->key = key;
@@ -77,11 +77,11 @@ __device__ void str_put(Table table, unsigned char* key, Lock *lock, int tid){
   }
   for (int i=0; i<32; i++) {
     if ((tid % 32) == i) {
-      Entry *location = &(table.pool[tid]);
+      Entry *location = &(table.pool[hashValue]);
       int temp_int;
 
       //location->key = key;
-	memcpy(location->key, key, 11 * sizeof(char) );
+      memcpy(location->key, key, WORD_SIZE * sizeof(char) );
       temp_int = str_get(table, key);
       location->value = (void *)(temp_int + 1);
       lock[hashValue].lock();
@@ -113,6 +113,10 @@ void initialize_table( Table &table, int entries, int elements ) {
     printf("In init table, entries = %d\n", entries);
     printf("In init table, elements = %d\n", elements);
 
+    printf("Entry size of = %lu\n", sizeof(Entry));
+
+    printf("Size of unsigned Int = %lu\n", sizeof(unsigned int));
+
     // cuda malloc
     HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
     HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
@@ -126,15 +130,25 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
     hostTable.entries = (Entry**)calloc( table.count, sizeof(Entry*) );
     hostTable.pool = (Entry*)malloc( ELEMENTS * sizeof( Entry ) );
 
+    printf("Entry* is size of = %lu\n", sizeof(Entry*));
+
+    printf("table.count = %d\n", table.count);
+
+    printf("size of char %lu\n", sizeof(char));
+
     HANDLE_ERROR( cudaMemcpy( hostTable.entries, table.entries, table.count * sizeof(Entry*), cudaMemcpyDeviceToHost ) );
 
+    printf("Entry copy completed.\n");
+
     HANDLE_ERROR( cudaMemcpy( hostTable.pool, table.pool, ELEMENTS * sizeof( Entry ), cudaMemcpyDeviceToHost ) );
+
+    printf("Pool copy completed.\n");
 
     // 0 over 1014
     for (int i=0; i<table.count; i++) {
       if (hostTable.entries[i] != NULL){
-	int x = (size_t)table.pool;
-	int y = (size_t)hostTable.pool;
+	//	int x = (size_t)table.pool;
+	//int y = (size_t)hostTable.pool;
       
 	//	printf("[%d]: SIZE OF TABLE.POOL = %d, SIZE OF hostTABLE.pool = %d\n", i, x, y);
 
@@ -178,7 +192,7 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 
 __device__ void zero_out_values_in_table(Table table){
   printf("In zero out table\n");
-  int count = table.count;
+  //  int count = table.count;
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (tid == 0){
@@ -216,8 +230,8 @@ __global__ void add_to_table_str( unsigned char **keys, void **values, Table tab
   int stride = blockDim.x * gridDim.x;
   
 //  unsigned char key[10] = keys[tid];
-	unsigned char key[10];
-	memcpy(key, keys[tid], 10*sizeof(char));
+  unsigned char key[WORD_SIZE];
+  memcpy(key, keys[tid], WORD_SIZE*sizeof(char));
 
   if(tid==0){
     printf("TABLE COUNT = %lu\n", table.count);
@@ -272,7 +286,7 @@ __host__ __device__ void iterate(Table table){
   for(int i=0; i<HASH_ENTRIES; i++){
     test_location = &(table.pool[i]);
     printf("[%d]: {", i);
-    printf("key = %d ", test_location->key);
+    printf("key = %s ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
   }
   printf("End iterate table\n");
@@ -281,7 +295,7 @@ __host__ __device__ void iterate(Table table){
 __host__ __device__ void new_iterate(Table table){
   printf("Start iterate table\n");
   Entry *test_location = table.entries[0];
-  printf("key = %d ,", test_location->key);
+  printf("key = %s ,", test_location->key);
   printf("value = %lu}\n", (unsigned long)test_location->value);
 
   /* 
