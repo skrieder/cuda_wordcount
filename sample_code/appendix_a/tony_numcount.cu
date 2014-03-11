@@ -121,26 +121,12 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
   // 0 over 1014
   for (int i=0; i<table.count; i++) {
     if (hostTable.entries[i] != NULL){
-      int x = (size_t)table.pool;
-      int y = (size_t)hostTable.pool;
-      
       //printf("[%d]: SIZE OF TABLE.POOL = %d, SIZE OF hostTABLE.pool = %d\n", i, x, y);
 
       hostTable.entries[i] = 
 	(Entry*)((size_t)hostTable.entries[i] - (size_t)table.pool + (size_t)hostTable.pool);
     }
   }
-
-  // 0 over 26M
-  /*
-    for (int i=0; i<ELEMENTS; i++) {
-        if (hostTable.pool[i].next != NULL)
-            hostTable.pool[i].next =
-                (Entry*)((size_t)hostTable.pool[i].next -
-                (size_t)table.pool + (size_t)hostTable.pool);
-    }
-  */
-
 }
 
 void free_table( Table &table ) {
@@ -148,39 +134,21 @@ void free_table( Table &table ) {
   HANDLE_ERROR( cudaFree( table.entries ) );
 }
 
-/* global add_to_table 
-   This function runs on the CUDA device. It takes a list of keys and void ** values along with a table and an array of locks. All of the threads in the current execution will stride across the array and insert relevant items into the table.*/
-
 __host__ __device__ unsigned long get(Table table, unsigned int key){
   size_t hashValue = hash(key, table.count);
-  //printf("In get: table.count= %lu\n", table.count);
-  //printf("key = %d\n", key);
-  //printf("hashValue = %lu\n", hashValue);
-  
   Entry *location2 = &(table.pool[hashValue]);
-  //      location->key = key;
   unsigned long ret = (unsigned long)location2->value;
 
-  //        printf("In Get: ret = %lu\n", ret);
-  //printf("In Get: location->value = %lu\n", (unsigned long) location2->value);
   return ret;
 }
 __device__ void zero_out_values_in_table(Table table){
   printf("In zero out table\n");
-  int count = table.count;
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (tid == 0){
-    //    Entry *temp_entry = table.entries[0];
     Entry *pool_entry = table.pool;
     memset ( (void *) pool_entry, 0, 1024*sizeof(Entry));
-    
-    //    for(int j=0; j<count; j++){
-    //  temp_entry = &(table.pool[j]);
-    //  memset ( (void *) temp_entry, 0, 24);
-    //}
     printf("ITERATE IN ZERO OUT TABLE\n");
-//    iterate(table);
     printf("End zero out table\n");
   }
 }
@@ -190,13 +158,12 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int stride = blockDim.x * gridDim.x;
   
-  unsigned int key = keys[tid]; //1111; // keys[tid];
+  unsigned int key = keys[tid]; 
 
   if(tid==0){
     printf("TABLE COUNT = %lu\n", table.count);
     zero_out_values_in_table(table);
   }
-
 
   while (tid < ELEMENTS) {
     put(table, key, lock, tid);
@@ -214,26 +181,8 @@ void verify_table( const Table &dev_table ) {
   printf("After copy table to host.\n");
 
   // iterate table
-  printf("ITERATE FROM VERIFY:\n");
   iterate(table);
-  printf("END ITERATE FROM VERIFY:\n");
-  /*
-    int count = 0;
-    for (size_t i=0; i<table.count; i++) {
-        Entry   *current = table.entries[i];
-        while (current != NULL) {
-            ++count;
-            if (hash( current->key, table.count ) != i)
-	          printf( "%d hashed to %ld, but was located at %ld\n", current->key, hash(current->key, table.count), i );
-            current = current->next;
-        }
-    }
-    if (count != ELEMENTS)
-        printf( "%d elements found in hash table.  Should be %ld\n",
-                count, ELEMENTS );
-    else
-        printf( "All %d elements found in hash table.\n", count );
-  */
+
   free( table.pool );
   free( table.entries );
   printf("END VERIFY TABLE\n");
@@ -300,8 +249,8 @@ int main( void ) {
   //printf("After memset\n");
 
   printf("On the host:\n");
-  printf("The buffer[0] = %d\n", buffer[0]);
-  printf("The buffer[1] = %d\n", buffer[1]);
+  printf("The buffer[0] = %lu\n", buffer[0]);
+  printf("The buffer[1] = %lu\n", buffer[1]);
   // move the input data to the device
   HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
 
