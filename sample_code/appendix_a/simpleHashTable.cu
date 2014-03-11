@@ -1,33 +1,23 @@
-/*
- * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.
- * Any use, reproduction, disclosure, or distribution of this software
- * and related documentation without an express license agreement from
- * NVIDIA Corporation is strictly prohibited.
- *
- * Please refer to the applicable NVIDIA end user license agreement (EULA)
- * associated with this source code for terms and conditions that govern
- * your use of this NVIDIA software.
- *
- */
+// A simple GPGPU hashtable implementation, based on the code from "CUDA by Example."
+// Scott J. Krieder - skrieder@iit.edu
+// Tonglin Li - tli13@hawk.iit.edu
+// Iman Sadooghi - isadoogh@iit.edu
 
-
-#include "../common/book.h"
+#include "book.h"
 #include "lock.h"
 
 #define SIZE    (100*1024*1024)
 #define ELEMENTS    (SIZE / sizeof(unsigned int))
 #define HASH_ENTRIES     1024
 
-
+// an Entry contains a key and a value
 struct Entry {
   unsigned int    key;
   void            *value;
-  //    Entry           *next;
 };
 
+// a table is a collection of Entry* which point to Entries in the pool
+// the pool stores the actual data
 struct Table {
   size_t  count;
   Entry   **entries;
@@ -35,48 +25,63 @@ struct Table {
 
 };
 
-__device__ __host__ size_t hash( unsigned int key, size_t count ) {
-  return key % count;
-}
-
+// several header declerations for the newly written functions
 __host__ __device__ void iterate(Table table);
 __device__ void put(Table table, unsigned int key, Lock *lock, int tid);
 __host__ __device__ unsigned long get(Table table, unsigned int key);
 
+
+// a simple hashing function
+__device__ __host__ size_t hash( unsigned int key, size_t count ) {
+  return key % count;
+}
+
+
+// a simple put function
 __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
   size_t hashValue = hash( key, table.count );
+  // on the gpu if you want to print something wrap it in a tid == 0
+  // this will make only a single thread print instead of O(1000) prints
   if (tid ==0){
-//    printf("HASH VALUE = %lu\n", hashValue);
   }
+  // 32 due to race conditions within warps, see book or Scott for more details
   for (int i=0; i<32; i++) {
     if ((tid % 32) == i) {
+      // create a temp Entry *
       Entry *location = &(table.pool[hashValue]);
       int temp_int;
-
+      // set the key in temp
       location->key = key;
+      // get the value curently stored at that key, ie. first time through should be 0
       temp_int = get(table, key);
+      // now grab the lock
       lock[hashValue].lock();
+      // increase the stored value by one
       location->value = (void *)(temp_int + 1); 
+      // update the actual table with your temp variable
       table.entries[hashValue] = location;
+      // release the lock
       lock[hashValue].unlock();
     }
   }
 }
 
+// init the table, called from host
 void initialize_table( Table &table, int entries, int elements ) {
+  // how many entries are in the entire table
   table.count = entries;
-  printf("In init table, entries = %d\n", entries);
-  printf("In init table, elements = %d\n", elements);
   // cuda malloc
   HANDLE_ERROR( cudaMalloc( (void**)&table.pool, elements * sizeof(Entry)) );
   HANDLE_ERROR( cudaMalloc( (void**)&table.entries, entries * sizeof(Entry*)) );
-  // memset
+  // memset and clear out the entry pointers to zero
   HANDLE_ERROR( cudaMemset( table.entries, 0, entries * sizeof(Entry*) ) );
 }
 
-
+// copy the table back to the host, called from host
 void copy_table_to_host( const Table &table, Table &hostTable) {
+  // set the count
   hostTable.count = table.count;
+  // zero out the entries again
   hostTable.entries = (Entry**)calloc( table.count, sizeof(Entry*) );
   hostTable.pool = (Entry*)malloc( ELEMENTS * sizeof( Entry ) );
   HANDLE_ERROR( cudaMemcpy( hostTable.entries, table.entries, table.count * sizeof(Entry*), cudaMemcpyDeviceToHost ) );
@@ -89,11 +94,13 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
   }
 }
 
+// free the tables
 void free_table( Table &table ) {
   HANDLE_ERROR( cudaFree( table.pool ) );
   HANDLE_ERROR( cudaFree( table.entries ) );
 }
 
+// a simple get function
 __host__ __device__ unsigned long get(Table table, unsigned int key){
   size_t hashValue = hash(key, table.count);
   Entry *location2 = &(table.pool[hashValue]);
@@ -101,7 +108,8 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
   return ret;
 }
 
-//Use this before on device, before you start to put 
+// Use this before on device, before you start to put 
+// This will zero out the table
 __device__ void zero_out_values_in_table(Table table){
   printf("In zero out table\n");
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -111,6 +119,7 @@ __device__ void zero_out_values_in_table(Table table){
   }
 }
 
+// prints the table to the screen
 __host__ __device__ void iterate(Table table){
   Entry *test_location;
 
@@ -120,5 +129,4 @@ __host__ __device__ void iterate(Table table){
     printf("key = %d ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
   }
-  printf("End iterate table\n");
 }
