@@ -18,12 +18,12 @@
 #include "lock.h"
 
 #define SIZE    (100*1024*1024)
-#define WORD_SIZE 4
-#define ELEMENTS    (SIZE / (sizeof(char)*WORD_SIZE))
+#define WORD_SIZE 1
+#define ELEMENTS    1024
 #define HASH_ENTRIES     1024
 
 struct Entry {
-  unsigned char key[WORD_SIZE];
+  void            *key;
   void            *value;
   Entry           *next;
 };
@@ -146,7 +146,8 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
 
     printf("table.count = %d\n", table.count);
 
-    printf("size of char %lu\n", sizeof(char));
+    printf("size of char = %lu\n", sizeof(char));
+    printf("size of unsigned char = %lu\n", sizeof(unsigned char));
 
     HANDLE_ERROR( cudaMemcpy( hostTable.entries, table.entries, table.count * sizeof(Entry*), cudaMemcpyDeviceToHost ) );
 

@@ -23,9 +23,8 @@
 
 
 struct Entry {
-    unsigned int    key;
-    void            *value;
-  //    Entry           *next;
+  void    *key;
+  void    *value;
 };
 
 struct Table {
@@ -41,13 +40,13 @@ __device__ __host__ size_t hash( unsigned int key, size_t count ) {
 
 __host__ __device__ void iterate(Table table);
 __device__ void put(Table table, unsigned int key, Lock *lock, int tid);
-__host__ __device__ unsigned long get(Table table, unsigned int key);
+__host__ __device__ unsigned long get(Table table, void *key);
 
 __host__ __device__ void new_iterate(Table table);
 
 
-__device__ void put(Table table, unsigned int key, Lock *lock, int tid){
-  size_t hashValue = hash( key, table.count );
+__device__ void put(Table table, void *key, Lock *lock, int tid){
+  size_t hashValue = hash( (long)key, table.count );
   if (tid ==0){
     printf("HASH VALUE = %lu\n", hashValue);
   }
@@ -56,7 +55,11 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
       Entry *location = &(table.pool[hashValue]);
       int temp_int;
 
-      location->key = key;
+      //char *temp_str = (char *)malloc(6);
+
+            location->key = (void *)key;
+      //      memcpy(location->key, temp_str, 6);
+
       temp_int = get(table, key);
       location->value = (void *)(temp_int + 1);
       lock[hashValue].lock();
@@ -92,8 +95,8 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
     // 0 over 1014
     for (int i=0; i<table.count; i++) {
       if (hostTable.entries[i] != NULL){
-	int x = (size_t)table.pool;
-	int y = (size_t)hostTable.pool;
+	//	int x = (size_t)table.pool;
+	//int y = (size_t)hostTable.pool;
       
 	//	printf("[%d]: SIZE OF TABLE.POOL = %d, SIZE OF hostTABLE.pool = %d\n", i, x, y);
 
@@ -122,8 +125,8 @@ void free_table( Table &table ) {
 /* global add_to_table 
 This function runs on the CUDA device. It takes a list of keys and void ** values along with a table and an array of locks. All of the threads in the current execution will stride across the array and insert relevant items into the table.*/
 
-__host__ __device__ unsigned long get(Table table, unsigned int key){
-        size_t hashValue = hash(key, table.count);
+__host__ __device__ unsigned long get(Table table, void *key){
+  size_t hashValue = hash((long)key, table.count);
 //	printf("In get: table.count= %lu\n", table.count);
 //	printf("key = %d\n", key);
 //	printf("hashValue = %lu\n", hashValue);
@@ -139,7 +142,7 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 
 __device__ void zero_out_values_in_table(Table table){
   printf("In zero out table\n");
-  int count = table.count;
+  //  int count = table.count;
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (tid == 0){
@@ -151,9 +154,9 @@ __device__ void zero_out_values_in_table(Table table){
     //  temp_entry = &(table.pool[j]);
     //  memset ( (void *) temp_entry, 0, 24);
     //}
-    printf("ITERATE IN ZERO OUT TABLE\n");
-    iterate(table);
-    printf("End zero out table\n");
+    //    printf("ITERATE IN ZERO OUT TABLE\n");
+    //    iterate(table);
+    //    printf("End zero out table\n");
   }
 }
 
@@ -162,16 +165,21 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int stride = blockDim.x * gridDim.x;
   
-  unsigned int key = keys[tid];
+  //  unsigned int key = keys[tid];
+
+  char *temp_str = "hello";
+  
+  void *key = (void *)malloc(6);
+
+  memcpy(key, temp_str, 6);
 
   if(tid==0){
     
-    printf("KEY ====== %d\n", key);
+    printf("KEY ====== %s\n", (char *)key);
     printf("unsigned int %lu\n", sizeof(unsigned int));
     printf("TABLE COUNT = %lu\n", table.count);
     zero_out_values_in_table(table);
   }
-
 
   while (tid < ELEMENTS) {
     put(table, key, lock, tid);
@@ -219,30 +227,39 @@ __host__ __device__ void iterate(Table table){
   Entry *test_location;
  
   for(int i=0; i<HASH_ENTRIES; i++){
-    test_location = &(table.pool[i]);
-    printf("[%d]: {", i);
-    printf("key = %d ", test_location->key);
-    printf("value = %lu}\n", (unsigned long)test_location->value);
+    printf("In for loop\n");
+    // test_location = &(table.pool[i]);
+    printf("test location set\n");
+    printf("[%d]: {\n", i);
+    //    char *temp_str = (char *)malloc(5);
+    //  memcpy(temp_str, test_location->key, 5);
+    //    printf("key = %s \n", (char *)test_location->key);
+    printf("key = %s \n", (char *)(table.pool[i].key));
+    
+    //    printf("value = %lu}\n", (unsigned long)test_location->value);
+    //    free(temp_str);
   }
   printf("End iterate table\n");
 }
 
+/*
 __host__ __device__ void new_iterate(Table table){
   printf("Start iterate table\n");
   Entry *test_location = table.entries[0];
-  printf("key = %d ,", test_location->key);
+  printf("key = %l ,", (long)test_location->key);
   printf("value = %lu}\n", (unsigned long)test_location->value);
 
-  /* 
+
   for(int i=0; i<HASH_ENTRIES+1; i++){
     test_location = &(table.pool[i]);
     printf("[%d]: {", i);
     printf("key = %d ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
   }
-  */
+
   printf("End iterate table\n");
 }
+*/
 
 int main( void ) {
   printf("Starting main.\n");
@@ -250,7 +267,10 @@ int main( void ) {
   // generates a large array of integers for the input data
   /* TODO - rather than generate a large block of int's you want to read from a text file and build an array of (char *)'s */
 
-  unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
+  //  void *str_buffer = (void *)
+
+  void *buffer = (void *)big_random_block( SIZE );
+
   unsigned int *dev_keys;
   void **dev_values;
 
@@ -262,8 +282,11 @@ int main( void ) {
   printf("After memset\n");
 
   printf("On the host:\n");
-  printf("The buffer[0] = %d\n", buffer[0]);
-  printf("The buffer[1] = %d\n", buffer[1]);
+
+  char * int_buff = (char *)buffer;
+
+  printf("The buffer[0] = %c\n", int_buff[0]);
+  printf("The buffer[1] = %c\n", int_buff[1]);
   // move the input data to the device
   HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
 

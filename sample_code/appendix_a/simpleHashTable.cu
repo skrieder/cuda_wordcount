@@ -55,8 +55,8 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
 
       location->key = key;
       temp_int = get(table, key);
-      location->value = (void *)(temp_int + 1);/      lock[hashValue].lock();
-      //      location->next = table.entries[hashValue];
+      lock[hashValue].lock();
+      location->value = (void *)(temp_int + 1); 
       table.entries[hashValue] = location;
       lock[hashValue].unlock();
     }
@@ -83,8 +83,6 @@ void copy_table_to_host( const Table &table, Table &hostTable) {
   HANDLE_ERROR( cudaMemcpy( hostTable.pool, table.pool, ELEMENTS * sizeof( Entry ), cudaMemcpyDeviceToHost ) );
   for (int i=0; i<table.count; i++) {
     if (hostTable.entries[i] != NULL){
-      int x = (size_t)table.pool;
-      int y = (size_t)hostTable.pool;
       hostTable.entries[i] =
         (Entry*)((size_t)hostTable.entries[i] - (size_t)table.pool + (size_t)hostTable.pool);
     }
@@ -106,7 +104,6 @@ __host__ __device__ unsigned long get(Table table, unsigned int key){
 //Use this before on device, before you start to put 
 __device__ void zero_out_values_in_table(Table table){
   printf("In zero out table\n");
-  int count = table.count;
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if (tid == 0){
     Entry *pool_entry = table.pool;
