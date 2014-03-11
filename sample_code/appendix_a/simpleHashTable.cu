@@ -37,7 +37,7 @@ __device__ __host__ size_t hash( unsigned int key, size_t count ) {
 }
 
 
-// a simple put function
+// a simple put function, note that it take the Lock array as argument.
 __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
   size_t hashValue = hash( key, table.count );
   // on the gpu if you want to print something wrap it in a tid == 0
