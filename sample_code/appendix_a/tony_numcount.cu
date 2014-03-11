@@ -44,6 +44,36 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid);
 __host__ __device__ unsigned long get(Table table, unsigned int key);
 __host__ __device__ void new_iterate(Table table);
 
+int fileRead(FILE *fd, size_t size, void* buff){
+        //buff = malloc(size);
+        //memset(buff, '/0', size);
+        //setvbuf(fd, NULL, _IONBF, size);
+        fread(buff, size, 1, fd);
+        return 0;
+}
+
+
+unsigned int lenStr(unsigned char *str){
+        unsigned char *p=str;
+        while(*p!='\0')
+                p++;
+        return(p-str);
+}
+
+//For CPU use only!!!
+unsigned int tokenizeToLongArrayCPU(unsigned char* src, long * LongArray ){
+        unsigned int i=0;
+        unsigned char* pch;
+        pch = (unsigned char*)strtok ((char*)src," ,.-");
+        while (pch != NULL){
+                long num = atol((char*)pch);
+                LongArray[i] = num;
+                pch =(unsigned char*) strtok (NULL, " ,.-");
+                i++;
+        }
+        return i;
+}
+
 
 __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
   size_t hashValue = hash( key, table.count );
@@ -58,10 +88,10 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
       location->key = key;
       temp_int = get(table, key);
       location->value = (void *)(temp_int + 1);
-      lock[hashValue].lock();
+//      lock[hashValue].lock();
       //      location->next = table.entries[hashValue];
       table.entries[hashValue] = location;
-      lock[hashValue].unlock();
+//      lock[hashValue].unlock();
     }
   }
 }
@@ -150,7 +180,7 @@ __device__ void zero_out_values_in_table(Table table){
     //  memset ( (void *) temp_entry, 0, 24);
     //}
     printf("ITERATE IN ZERO OUT TABLE\n");
-    iterate(table);
+//    iterate(table);
     printf("End zero out table\n");
   }
 }
@@ -160,7 +190,7 @@ __global__ void add_to_table( unsigned int *keys, void **values, Table table, Lo
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int stride = blockDim.x * gridDim.x;
   
-  unsigned int key = keys[tid];
+  unsigned int key = keys[tid]; //1111; // keys[tid];
 
   if(tid==0){
     printf("TABLE COUNT = %lu\n", table.count);
@@ -245,7 +275,19 @@ int main( void ) {
   // generates a large array of integers for the input data
   /* TODO - rather than generate a large block of int's you want to read from a text file and build an array of (char *)'s */
 
-  unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
+//  unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
+
+	unsigned long *buffer = (unsigned long*)calloc(1, 1000000*sizeof(unsigned long));
+	char* file = "numbers";
+	FILE* fd = fopen (file,"r");
+        unsigned char* buf;
+        int size =1000000;
+        buf = (unsigned char*)malloc(size);
+        memset(buf, '\0', size);
+        fileRead(fd, size, buf);
+	tokenizeToLongArrayCPU(buf,(long *) buffer); //buf: string, buffer: long array
+
+
   printf("generated random array\n");
   unsigned int *dev_keys;
   void **dev_values;
