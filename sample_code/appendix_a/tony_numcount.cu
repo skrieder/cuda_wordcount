@@ -277,12 +277,12 @@ int main( void ) {
 
 //  unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
 
-	unsigned long *buffer = (unsigned long*)calloc(1, 1000000*sizeof(unsigned long));
+	unsigned long *buffer = (unsigned long*)calloc(1, SIZE*sizeof(unsigned long));
 	char* file = "numbers";
 	FILE* fd = fopen (file,"r");
         unsigned char* buf;
         int size =1000000;
-        buf = (unsigned char*)malloc(size);
+        buf = (unsigned char*)malloc(SIZE);
         memset(buf, '\0', size);
         fileRead(fd, size, buf);
 	tokenizeToLongArrayCPU(buf,(long *) buffer); //buf: string, buffer: long array
