@@ -17,9 +17,9 @@
 #include "../common/book.h"
 #include "lock.h"
 
-#define SIZE    (100*1024*1024)
-#define ELEMENTS    (SIZE / sizeof(unsigned int))
-#define HASH_ENTRIES     1024
+#define SIZE    (4*128)//100*1024*1024
+#define ELEMENTS  (SIZE / sizeof(unsigned int))
+#define HASH_ENTRIES     128//1024
 
 
 struct Entry {
@@ -88,7 +88,7 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
       location->key = key;
       temp_int = get(table, key);
 	if(key!=0)
-		printf("put(%d): get = %d\n", key, temp_int);
+		printf("put(%u): get = %lu\n", key, temp_int);
       location->value = (void *)(temp_int + 1);
      // lock[hashValue].lock();
       //      location->next = table.entries[hashValue];
@@ -197,7 +197,7 @@ __host__ __device__ void iterate(Table table){
   for(int i=0; i<HASH_ENTRIES; i++){
     test_location = &(table.pool[i]);
     printf("[%d]: {", i);
-    printf("key = %d ", test_location->key);
+    printf("key = %u ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
   }
   printf("End iterate table\n");
@@ -222,23 +222,28 @@ __host__ __device__ void new_iterate(Table table){
 
 int main( void ) {
   printf("Starting main.\n");
-  printf("Elements = %lu\n", ELEMENTS);
+  printf("Elements = %d\n", ELEMENTS);
   // generates a large array of integers for the input data
   /* TODO - rather than generate a large block of int's you want to read from a text file and build an array of (char *)'s */
 
 //  unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
 
-	unsigned int *buffer = (unsigned int*)calloc(1, SIZE*sizeof(unsigned int));
+	unsigned int *buffer = (unsigned int*)calloc(1, ELEMENTS*sizeof(unsigned int));
+//	unsigned int *buffer = (unsigned int*)big_random_block( SIZE );
+
 	
-	for (int i=0; i<1000;i++){
-//		printf("buffer[%d]:%d\n", i, buffer[i]);
+	for (int i=0; i<ELEMENTS;i++){
+		//printf("Old: buffer[%d]:%d\n", i, buffer[i]);
+		buffer[i]= (unsigned int) i;
+		printf("New: buffer[%d]:%d\n", i, buffer[i]);
 	}
+
 	char* file = "numbers";
 	FILE* fd = fopen (file,"r");
         unsigned char* buf;
-        int size =1000000;
+      //  int size =1000000;
         buf = (unsigned char*)malloc(SIZE);
-        memset(buf, '\0', size);
+        memset(buf, '\0', SIZE);
         //fileRead(fd, size, buf);
 	//tokenizeToLongArrayCPU(buf,(long *) buffer); //buf: string, buffer: long array
 
@@ -256,7 +261,7 @@ int main( void ) {
   printf("On the host:\n");
   printf("The buffer[0] = %d\n", buffer[0]);
   printf("The buffer[1] = %d\n", buffer[1]);
-
+/*
 //Sample key for put:
 	buffer[0]= 1;
 	buffer[1]= 2;
@@ -267,7 +272,9 @@ int main( void ) {
 	buffer[6]=3;
 	buffer[7]=3;
   // move the input data to the device
-  HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
+*/  
+
+HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
 
   // copy the values to dev_values here
   // filled in by user of this code example
@@ -303,6 +310,7 @@ int main( void ) {
   // call device function to parallel add to table
   // this launches 60 blocks with 256 threads each, each block is scheduled on a SM without any order guarantees
   add_to_table<<<60,256>>>( dev_keys, dev_values, table, dev_lock );
+//60, 256
   cudaDeviceSynchronize();
   printf("GPU Call done\n");
 
