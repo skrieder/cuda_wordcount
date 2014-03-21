@@ -63,6 +63,7 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
       //      location->next = table.entries[hashValue];
       table.entries[hashValue] = location;
       lock[hashValue].unlock();
+	printf("After put(%u): get(key) = %lu\n", key, get(table, key));
     }
   }
 }
@@ -151,7 +152,7 @@ __device__ void zero_out_values_in_table(Table table){
     //  memset ( (void *) temp_entry, 0, 24);
     //}
     printf("ITERATE IN ZERO OUT TABLE\n");
-    iterate(table);
+//    iterate(table);
     printf("End zero out table\n");
   }
 }
@@ -217,7 +218,7 @@ __host__ __device__ void iterate(Table table){
   for(int i=0; i<HASH_ENTRIES; i++){
     test_location = &(table.pool[i]);
     printf("[%d]: {", i);
-    printf("key = %d ", test_location->key);
+    printf("key = %u ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
   }
   printf("End iterate table\n");
