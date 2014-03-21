@@ -94,10 +94,10 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
 	if(key!=0)
 	//	printf("put(%u): get = %lu\n", key, temp_int);
       location->value = (void *)(temp_int + 1);
-//      lock[hashValue].lock();
+      lock[hashValue].lock();
       //      location->next = table.entries[hashValue];
       table.entries[hashValue] = location;
-//      lock[hashValue].unlock();
+      lock[hashValue].unlock();
 
 	printf("After put(%u): get(key) = %lu\n", key, get(table, key));
 
