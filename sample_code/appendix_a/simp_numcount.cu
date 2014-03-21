@@ -17,9 +17,10 @@
 #include "../common/book.h"
 #include "lock.h"
 
-#define SIZE    (4*128)//100*1024*1024
-#define ELEMENTS  (SIZE / sizeof(unsigned int))
-#define HASH_ENTRIES     128//1024
+#define HASH_ENTRIES     1024//1024 : how many hash slots in the table, ignore the collision problem.
+#define SIZE    (4*1024)//100*1024*1024 //memory size, used for holding hash table keys
+#define ELEMENTS  (SIZE / sizeof(unsigned int)) //default: no 4*. How many elements will be mapped into hashtable.
+//#define HASH_ENTRIES     128//1024
 
 
 struct Entry {
@@ -35,6 +36,7 @@ struct Table {
 };
 
 // TODO - This function needs to be modified to generate a hash based on a strong input
+
 __device__ __host__ size_t hash( unsigned int key, size_t count ) {
   return key % count;
 }
@@ -82,18 +84,21 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
   }
   for (int i=0; i<32; i++) {
     if ((tid % 32) == i) {
-      Entry *location = &(table.pool[hashValue]);
+      Entry *location = &(table.pool[hashValue]);//hashValue
       int temp_int;
 
       location->key = key;
       temp_int = get(table, key);
 	if(key!=0)
-		printf("put(%u): get = %lu\n", key, temp_int);
+	//	printf("put(%u): get = %lu\n", key, temp_int);
       location->value = (void *)(temp_int + 1);
-     // lock[hashValue].lock();
+      lock[hashValue].lock();
       //      location->next = table.entries[hashValue];
       table.entries[hashValue] = location;
-     // lock[hashValue].unlock();
+      lock[hashValue].unlock();
+
+	printf("After put(%u): get(key) = %lu\n", key, get(table, key));
+
     }
   }
 }
@@ -234,8 +239,8 @@ int main( void ) {
 	
 	for (int i=0; i<ELEMENTS;i++){
 		//printf("Old: buffer[%d]:%d\n", i, buffer[i]);
-		buffer[i]= (unsigned int) i;
-		printf("New: buffer[%d]:%d\n", i, buffer[i]);
+		buffer[i]= (unsigned int) i;//i;
+	//	printf("New: buffer[%d]:%d\n", i, buffer[i]);
 	}
 
 	char* file = "numbers";
@@ -258,10 +263,12 @@ int main( void ) {
   //  HANDLE_ERROR( cudaMemset( (void *)&dev_values, 0, SIZE) );
   //printf("After memset\n");
 
+
+/*
   printf("On the host:\n");
   printf("The buffer[0] = %d\n", buffer[0]);
   printf("The buffer[1] = %d\n", buffer[1]);
-/*
+
 //Sample key for put:
 	buffer[0]= 1;
 	buffer[1]= 2;
@@ -271,8 +278,16 @@ int main( void ) {
 	buffer[5]= 12345;
 	buffer[6]=3;
 	buffer[7]=3;
+buffer[8]=30;
+buffer[9]=31;
+buffer[10]=32;
+buffer[11]=33;
+buffer[12]=34;
+buffer[13]=63;
+buffer[14]=64;
+buffer[11]=65; */
   // move the input data to the device
-*/  
+  
 
 HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
 
@@ -309,7 +324,7 @@ HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
   printf("Calling GPU func\n");
   // call device function to parallel add to table
   // this launches 60 blocks with 256 threads each, each block is scheduled on a SM without any order guarantees
-  add_to_table<<<60,256>>>( dev_keys, dev_values, table, dev_lock );
+  add_to_table<<<30,128>>>( dev_keys, dev_values, table, dev_lock );
 //60, 256
   cudaDeviceSynchronize();
   printf("GPU Call done\n");
