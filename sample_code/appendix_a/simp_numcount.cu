@@ -38,6 +38,8 @@ struct Table {
 // TODO - This function needs to be modified to generate a hash based on a strong input
 
 __device__ __host__ size_t hash( unsigned int key, size_t count ) {
+
+//	key = key*2654435761; //a hash fun.
   return key % count;
 }
 
@@ -92,10 +94,10 @@ __device__ void put(Table table, unsigned int key, Lock *lock, int tid){
 	if(key!=0)
 	//	printf("put(%u): get = %lu\n", key, temp_int);
       location->value = (void *)(temp_int + 1);
-      lock[hashValue].lock();
+//      lock[hashValue].lock();
       //      location->next = table.entries[hashValue];
       table.entries[hashValue] = location;
-      lock[hashValue].unlock();
+//      lock[hashValue].unlock();
 
 	printf("After put(%u): get(key) = %lu\n", key, get(table, key));
 
@@ -198,14 +200,16 @@ void verify_table( const Table &dev_table ) {
 __host__ __device__ void iterate(Table table){
   printf("Start iterate table\n");
   Entry *test_location;
- 
+ 	int empty =0;
   for(int i=0; i<HASH_ENTRIES; i++){
     test_location = &(table.pool[i]);
     printf("[%d]: {", i);
     printf("key = %u ", test_location->key);
     printf("value = %lu}\n", (unsigned long)test_location->value);
+	if(test_location->key==0 && (unsigned long)test_location->value == 0)
+		empty++;
   }
-  printf("End iterate table\n");
+  printf("End iterate table, empty slots found: %d\n", empty);
 }
 
 __host__ __device__ void new_iterate(Table table){
@@ -244,11 +248,11 @@ int main( void ) {
 	}
 
 	char* file = "numbers";
-	FILE* fd = fopen (file,"r");
-        unsigned char* buf;
+//	FILE* fd = fopen (file,"r");
+//        unsigned char* buf;
       //  int size =1000000;
-        buf = (unsigned char*)malloc(SIZE);
-        memset(buf, '\0', SIZE);
+       // buf = (unsigned char*)malloc(SIZE);
+      //  memset(buf, '\0', SIZE);
         //fileRead(fd, size, buf);
 	//tokenizeToLongArrayCPU(buf,(long *) buffer); //buf: string, buffer: long array
 
@@ -324,7 +328,7 @@ HANDLE_ERROR( cudaMemcpy( dev_keys, buffer, SIZE, cudaMemcpyHostToDevice ) );
   printf("Calling GPU func\n");
   // call device function to parallel add to table
   // this launches 60 blocks with 256 threads each, each block is scheduled on a SM without any order guarantees
-  add_to_table<<<30,128>>>( dev_keys, dev_values, table, dev_lock );
+  add_to_table<<<60,256>>>( dev_keys, dev_values, table, dev_lock );
 //60, 256
   cudaDeviceSynchronize();
   printf("GPU Call done\n");
